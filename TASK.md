@@ -3,8 +3,8 @@
 > **Living task tracker.** Active work, milestones, backlog, and anything discovered mid-process.
 > Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked. Add new items as they surface — never delete, mark done. Reference `PLANNING.md` for the *why*.
 
-**Last updated:** _set on first edit_
-**Current focus:** Milestone 1 — Foundation
+**Last updated:** 2026-05-29
+**Current focus:** Milestone 2 — Ask a Query (Milestone 1 complete & pushed)
 **Build approach:** vertical slice — one complete end-to-end loop before going wide.
 
 ---
@@ -13,7 +13,7 @@
 
 | # | Milestone | Theme | Status |
 |---|---|---|---|
-| 1 | Foundation | Workspaces, models, auth, CI, Docker | `[ ]` |
+| 1 | Foundation | Workspaces, models, auth, CI, Docker | `[x]` |
 | 2 | Ask a Query | AI showcase: intake + quality gates | `[ ]` |
 | 3 | Forum + Solution Engine | Answers, likes, resolution, points | `[ ]` |
 | 4 | Badges & Bans | Reputation + governance basics | `[ ]` |
@@ -28,7 +28,7 @@
 
 > The handful of tasks being worked on right now. Pull from the milestone below as capacity frees up.
 
-- [ ] _nothing started yet — pull from Milestone 1_
+- [ ] _Milestone 1 complete — pull from Milestone 2_
 
 ---
 
@@ -36,18 +36,18 @@
 
 Goal: a runnable skeleton with auth, models, green CI, and one-command startup.
 
-- [ ] Initialize monorepo workspaces (`client/`, `server/`) + root tooling
-- [ ] Configure ESLint (shared config) and base npm scripts (`lint`, `test`, `build`, `dev`)
-- [ ] `server/config/db.js` — single DB connection module (swappable boundary)
-- [ ] `server/config/ai.js` — single AI module stub with request queue + backoff scaffold (swappable boundary)
-- [ ] Define Mongoose models: users, refresh_tokens, queries, answers, notifications, moderation_queue, audit_log, faq_entries, likes, chatbot_sessions
-- [ ] JWT auth: access + refresh tokens; refresh-token hash store; bcrypt password hashing
-- [ ] Auth endpoints: register, login, refresh, logout (revoke refresh token)
-- [ ] Role/ban middleware: `auth`, `admin`, `banCheck`
-- [ ] React shell (Vite) + router + `AuthContext` + axios client with token refresh
-- [ ] `.github/workflows/ci.yml` — lint → test → build (green); `mongodb-memory-server` + mocked AI
-- [ ] `docker-compose.yml` — Express + Mongo + client, one-command run
-- [ ] Seed script skeleton (structure + offline embedding hook for later)
+- [x] Initialize monorepo workspaces (`client/`, `server/`) + root tooling
+- [x] Configure ESLint (shared config) and base npm scripts (`lint`, `test`, `build`, `dev`)
+- [x] `server/config/db.js` — single DB connection module (swappable boundary)
+- [x] `server/config/ai.js` — single AI module stub with request queue + backoff scaffold (swappable boundary)
+- [x] Define Mongoose models: users, refresh_tokens, queries, answers, notifications, moderation_queue, audit_log, faq_entries, likes, chatbot_sessions
+- [x] JWT auth: access + refresh tokens; refresh-token hash store; bcrypt password hashing
+- [x] Auth endpoints: register, login, refresh, logout (revoke refresh token)
+- [x] Role/ban middleware: `auth`, `admin`, `banCheck`
+- [x] React shell (Vite) + router + `AuthContext` + axios client with token refresh
+- [x] `.github/workflows/ci.yml` — lint → test → build (green); `mongodb-memory-server` + mocked AI
+- [x] `docker-compose.yml` — Express + Mongo + client, one-command run
+- [x] Seed script skeleton (structure + offline embedding hook for later)
 
 ---
 
