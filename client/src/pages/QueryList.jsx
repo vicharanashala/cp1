@@ -89,7 +89,14 @@ export default function QueryList() {
                   </span>
                 ))}
                 {q.is_flagged_duplicate && <span className="badge flag">possible duplicate</span>}
-                <span className="by">by {q.author?.name ?? 'Unknown'}</span>
+                <span className="by">
+                  by{' '}
+                  {q.author?.id ? (
+                    <Link to={`/users/${q.author.id}`}>{q.author.name}</Link>
+                  ) : (
+                    (q.author?.name ?? 'Unknown')
+                  )}
+                </span>
               </div>
             </li>
           ))}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getLeaderboard } from '../api/answers.js';
 
 export default function Leaderboard() {
@@ -34,7 +35,9 @@ export default function Leaderboard() {
           {users.map((u) => (
             <li key={u.id}>
               <span className="rank">#{u.rank}</span>
-              <span className="name">{u.name}</span>
+              <Link className="name" to={`/users/${u.id}`}>
+                {u.name}
+              </Link>
               <span className="pts">{u.points} pts</span>
             </li>
           ))}

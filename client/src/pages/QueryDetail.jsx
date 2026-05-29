@@ -96,7 +96,9 @@ export default function QueryDetail() {
             #{t}
           </span>
         ))}
-        <span className="by">by {query.author?.name ?? 'Unknown'}</span>
+        <span className="by">
+          by <AuthorLink author={query.author} />
+        </span>
       </div>
 
       {query.is_flagged_duplicate && (
@@ -204,7 +206,9 @@ function AnswerCard({ answer, canAccept, canLike, onChange, queryId }) {
         >
           ▲ {answer.like_count}
         </button>
-        <span className="by">by {answer.author?.name ?? 'Unknown'}</span>
+        <span className="by">
+          by <AuthorLink author={answer.author} />
+        </span>
         {canAccept && !answer.is_accepted && (
           <button className="btn-link" onClick={onAccept} disabled={busy}>
             Mark as solution
@@ -223,6 +227,12 @@ function AnswerCard({ answer, canAccept, canLike, onChange, queryId }) {
       </div>
     </article>
   );
+}
+
+function AuthorLink({ author }) {
+  if (!author) return <>Unknown</>;
+  if (author.anonymous || !author.id) return <>{author.name ?? 'Unknown'}</>;
+  return <Link to={`/users/${author.id}`}>{author.name}</Link>;
 }
 
 function AnswerForm({ queryId, onPosted }) {

@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
+import BanBanner from './components/BanBanner.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
@@ -10,11 +11,13 @@ import QueryDetail from './pages/QueryDetail.jsx';
 import AskQuery from './pages/AskQuery.jsx';
 import EditQuery from './pages/EditQuery.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
+import Profile from './pages/Profile.jsx';
 
 export default function App() {
   return (
     <>
       <Navbar />
+      <BanBanner />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -23,6 +26,7 @@ export default function App() {
           <Route path="/queries" element={<QueryList />} />
           <Route path="/queries/:id" element={<QueryDetail />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/users/:id" element={<Profile />} />
           <Route
             path="/ask"
             element={
