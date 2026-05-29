@@ -83,5 +83,8 @@ export const STALENESS_DAYS = 180; // flag answers older than this
 export const DUPLICATE_SIMILARITY_THRESHOLD = 0.8; // >80% → flag duplicate
 export const MAX_ANSWERS_KEPT_ON_RESOLVE = 3;
 
+// RAG chatbot: minimum cosine similarity for a retrieved doc to count as a match.
+export const CHATBOT_MATCH_THRESHOLD = 0.3;
+
 // Embedding dimensions (fixed). Mirrors AI_EMBED_DIMS env default.
 export const EMBEDDING_DIMS = 768;

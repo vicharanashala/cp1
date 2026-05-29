@@ -5,6 +5,8 @@ import answerRoutes from './answerRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import userRoutes from './userRoutes.js';
 import adminRoutes from './adminRoutes.js';
+import faqRoutes from './faqRoutes.js';
+import chatbotRoutes from './chatbotRoutes.js';
 import jobRoutes from './jobRoutes.js';
 import { ai } from '../config/ai.js';
 import mongoose from 'mongoose';
@@ -27,6 +29,8 @@ router.use('/answers', answerRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
+router.use('/faq', faqRoutes);
+router.use('/chatbot', chatbotRoutes);
 router.use('/jobs', jobRoutes);
 
 export default router;

@@ -4,8 +4,9 @@
 import { connectDB, disconnectDB } from '../config/db.js';
 import { ai } from '../config/ai.js';
 import { User } from '../models/User.js';
+import { FaqEntry } from '../models/FaqEntry.js';
 import { hashPassword } from '../utils/password.js';
-import { ROLES } from '../config/constants.js';
+import { ROLES, FAQ_SOURCE } from '../config/constants.js';
 
 // Embed a batch of {text} items offline and attach .embedding. Used by later
 // seeds for queries / faq_entries so search & RAG work with no live calls.
@@ -34,11 +35,45 @@ async function seedUsers() {
   }
 }
 
+async function seedFaqs() {
+  const seedData = [
+    {
+      category: 'Account',
+      question: 'How do I reset my password?',
+      answer: 'Use the "Forgot password" link on the login page. You will receive an email with a reset link valid for one hour.',
+    },
+    {
+      category: 'Account',
+      question: 'How do I change my email address?',
+      answer: 'Open your profile settings, edit the email field, and confirm the change via the verification email we send.',
+    },
+    {
+      category: 'Getting started',
+      question: 'How do I ask a good question?',
+      answer: 'Give a clear title, describe what you tried, add relevant tags, and attach a screenshot if it helps. The quality gates will warn you about duplicates.',
+    },
+    {
+      category: 'Reputation',
+      question: 'How do I earn points and badges?',
+      answer: 'You earn points when your answers are liked or accepted as solutions. Reaching 50, 150, 500 and 1000 points unlocks the Helper, Contributor, Expert and Legend badges.',
+    },
+  ];
+
+  for (const f of seedData) {
+    const exists = await FaqEntry.findOne({ question: f.question, is_deleted: false });
+    if (exists) continue;
+    const embedding = await ai.embed(`${f.question}\n\n${f.answer}`);
+    await FaqEntry.create({ ...f, source: FAQ_SOURCE.ADMIN, embedding });
+    // eslint-disable-next-line no-console
+    console.log(`[seed] created FAQ: ${f.question}`);
+  }
+}
+
 async function run() {
   await connectDB();
   await seedUsers();
-  // Later milestones: seed categories, queries, answers, faq_entries (with
-  // embedSeedItems), notifications, etc.
+  await seedFaqs();
+  // Later milestones: seed demo queries, answers, notifications, etc.
   // eslint-disable-next-line no-console
   console.log('[seed] done');
   await disconnectDB();
