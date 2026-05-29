@@ -4,7 +4,7 @@
 > Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked. Add new items as they surface — never delete, mark done. Reference `PLANNING.md` for the *why*.
 
 **Last updated:** 2026-05-29
-**Current focus:** Milestone 4 — Badges & Bans (Milestones 1–3 complete & pushed)
+**Current focus:** Milestone 5 — FAQ + Chatbot + Notifications (Milestones 1–4 complete & pushed)
 **Build approach:** vertical slice — one complete end-to-end loop before going wide.
 
 ---
@@ -16,7 +16,7 @@
 | 1 | Foundation | Workspaces, models, auth, CI, Docker | `[x]` |
 | 2 | Ask a Query | AI showcase: intake + quality gates | `[x]` |
 | 3 | Forum + Solution Engine | Answers, likes, resolution, points | `[x]` |
-| 4 | Badges & Bans | Reputation + governance basics | `[ ]` |
+| 4 | Badges & Bans | Reputation + governance basics | `[x]` |
 | 5 | FAQ + Chatbot + Notifications | RAG + knowledge promotion | `[ ]` |
 | 6 | Admin | Dashboard + moderation tooling | `[ ]` |
 | 7 | Maintenance crons | Scheduled jobs + manual triggers | `[ ]` |
@@ -28,7 +28,7 @@
 
 > The handful of tasks being worked on right now. Pull from the milestone below as capacity frees up.
 
-- [ ] _Milestones 1–3 complete — pull from Milestone 4_
+- [ ] _Milestones 1–4 complete — pull from Milestone 5_
 
 ---
 
@@ -91,12 +91,12 @@ Goal: community answering loop with reputation rewards.
 
 Goal: reputation made visible + first governance teeth.
 
-- [ ] Positive badges auto-award: Helper/Contributor/Expert/Legend (50/150/500/1000)
-- [ ] Negative badges admin-issued: Warning / Restricted / Suspended
-- [ ] 24h auto-ban for spam + live countdown banner
-- [ ] Manual ban / unban (admin)
-- [ ] Ban expiry cron (hourly) + manual trigger
-- [ ] Profile page showing points, badges, negative badges
+- [x] Positive badges auto-award: Helper/Contributor/Expert/Legend (50/150/500/1000)
+- [x] Negative badges admin-issued: Warning / Restricted / Suspended
+- [x] 24h auto-ban for spam + live countdown banner
+- [x] Manual ban / unban (admin)
+- [x] Ban expiry cron (hourly) + manual trigger
+- [x] Profile page showing points, badges, negative badges
 
 ---
 
