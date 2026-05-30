@@ -40,3 +40,21 @@ export async function checkGrammar(text) {
   const { data } = await api.post('/queries/check-grammar', { text });
   return data;
 }
+
+// Up/down vote a question. value is 1, -1, or 0 (clear). Returns { vote_score, my_vote }.
+export async function voteQuery(id, value) {
+  const { data } = await api.post(`/queries/${id}/vote`, { value });
+  return data;
+}
+
+// Toggle a bookmark on a question. Returns { saved }.
+export async function saveQuery(id) {
+  const { data } = await api.post(`/queries/${id}/save`);
+  return data;
+}
+
+// The current user's bookmarked questions.
+export async function getBookmarks() {
+  const { data } = await api.get('/queries/bookmarks');
+  return data.items;
+}

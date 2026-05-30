@@ -43,6 +43,9 @@ const querySchema = new mongoose.Schema(
 
     reports: { type: [reportSchema], default: [] },
 
+    // Community voting (net up/down score; individual votes live in `votes`).
+    vote_score: { type: Number, default: 0 },
+
     // LRU.
     last_accessed_at: { type: Date, default: Date.now },
     access_count: { type: Number, default: 0 },

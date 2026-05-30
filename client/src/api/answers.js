@@ -15,6 +15,13 @@ export async function likeAnswer(answerId) {
   return data; // { liked, like_count }
 }
 
+// Up/down vote an answer. value is 1, -1, or 0 (clear).
+// Returns { value, like_count, score, liked }.
+export async function voteAnswer(answerId, value) {
+  const { data } = await api.post(`/answers/${answerId}/vote`, { value });
+  return data;
+}
+
 export async function deleteAnswer(answerId) {
   const { data } = await api.delete(`/answers/${answerId}`);
   return data;

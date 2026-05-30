@@ -9,4 +9,6 @@ export { ModerationQueue } from './ModerationQueue.js';
 export { AuditLog } from './AuditLog.js';
 export { FaqEntry } from './FaqEntry.js';
 export { Like } from './Like.js';
+export { Vote } from './Vote.js';
+export { Bookmark } from './Bookmark.js';
 export { ChatbotSession } from './ChatbotSession.js';
