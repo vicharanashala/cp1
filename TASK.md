@@ -25,7 +25,7 @@
 | 9 | Design system & app shell | Light theme tokens + sidebar shell (FE) | `[x]` |
 | 10 | Home & FAQ re-skin | Dashboard + FAQ to reference (FE) | `[x]` |
 | 11 | Forum & thread re-skin | Filters/sort/pagination + Markdown (FE) | `[x]` |
-| 12 | Admin dashboard re-skin | KPIs + needs-attention + audit feed (FE) | `[ ]` |
+| 12 | Admin dashboard re-skin | KPIs + needs-attention + audit feed (FE) | `[x]` |
 | 13 | Engagement backend | Votes, bookmarks, answer counts (BE+FE) | `[ ]` |
 | 14 | Activity/comments/settings | Feed, replies, settings, avatars (BE+FE) | `[ ]` |
 
@@ -212,10 +212,10 @@ Goal: match Community Discussions + Question Thread. **Frontend (existing APIs) 
 
 Goal: match the "System Overview" screen. **Frontend (existing APIs + small derivations).**
 
-- [ ] KPI cards: Total Users, Open Questions, **Resolution Rate %** (resolved/total, derived), Mod Queue Size + load indicator, AI Status (from `/health`)
-- [ ] "Needs Attention" panel aggregating existing data: flagged content (reports), stale docs (`is_outdated`), pending approvals (`requires_approval`) — each linking to the relevant tab
-- [ ] Recent Audit Log feed on the overview (`listAudit`, latest N)
-- [ ] Keep the Moderation / Users / FAQ / Audit / Maintenance tabs
+- [x] KPI cards: Total Users, Open Questions, **Resolution Rate %** (resolved/total, derived), Mod Queue Size + load indicator, AI Status (from `/health`)
+- [x] "Needs Attention" panel aggregating existing data: flagged content (moderation queue), pending approvals (`requires_approval`), open questions — each deep-linking to the relevant view _(stale-docs item dropped: no server count for `is_outdated`)_
+- [x] Recent Audit Log feed on the overview (`getAudit`, latest 6)
+- [x] Keep the Moderation / Users / FAQ / Audit / Maintenance tabs
 
 ## Milestone 13 — Engagement backend (votes, bookmarks, answer counts)
 
