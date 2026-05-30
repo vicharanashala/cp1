@@ -5,6 +5,11 @@ export async function getMetrics() {
   return data;
 }
 
+export async function getHealth() {
+  const { data } = await api.get('/health');
+  return data;
+}
+
 export async function listUsers(params = {}) {
   const { data } = await api.get('/admin/users', { params });
   return data;
