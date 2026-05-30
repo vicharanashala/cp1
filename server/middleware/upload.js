@@ -12,15 +12,25 @@ const uploadDir = path.join(__dirname, '..', config.uploads.dir);
 // Ensure the upload directory exists (Multer writes here; app.js serves it static).
 fs.mkdirSync(uploadDir, { recursive: true });
 
+// Map the (validated) MIME type to a safe extension. Deriving the extension
+// from the MIME type — NOT from the client-controlled original filename —
+// prevents an attacker storing e.g. `evil.html` that would later be served as
+// HTML/script from the /uploads path.
+const MIME_EXT = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+};
+const ALLOWED = new Set(Object.keys(MIME_EXT));
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = MIME_EXT[file.mimetype] ?? '.bin';
     cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
   },
 });
-
-const ALLOWED = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
 function fileFilter(_req, file, cb) {
   if (ALLOWED.has(file.mimetype)) return cb(null, true);

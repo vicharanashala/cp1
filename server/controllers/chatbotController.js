@@ -11,6 +11,6 @@ export const ask = asyncHandler(async (req, res) => {
 });
 
 export const session = asyncHandler(async (req, res) => {
-  const result = await chatbotService.getSession(req.params.token);
+  const result = await chatbotService.getSession(req.params.token, req.userId ?? null);
   res.json(result);
 });

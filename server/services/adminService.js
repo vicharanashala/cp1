@@ -81,8 +81,9 @@ export async function setRole(admin, userId, role) {
 export async function listModeration(opts = {}) {
   const { limit, page, skip } = paginate(opts);
   const filter = {};
-  filter.status = opts.status || MODERATION_STATUS.PENDING;
-  if (opts.type) filter.type = opts.type;
+  // Coerce to strings so query-string operator objects can't be injected.
+  filter.status = opts.status ? String(opts.status) : MODERATION_STATUS.PENDING;
+  if (opts.type) filter.type = String(opts.type);
 
   const [items, total] = await Promise.all([
     ModerationQueue.find(filter)

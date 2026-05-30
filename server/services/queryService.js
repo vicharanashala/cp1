@@ -129,14 +129,23 @@ export async function createQuery(user, payload, screenshots = []) {
 
 /** List non-deleted queries with optional filters + pagination. */
 export async function listQueries(opts = {}, viewerId) {
+  // Coerce all user-supplied filters to primitive strings. Express' query
+  // parser turns `?category[$ne]=x` into an object, which would otherwise be
+  // injected as a Mongo operator (NoSQL injection) into the find filter.
+  const str = (v) => (v == null ? undefined : String(v));
+  const category = str(opts.category);
+  const tag = str(opts.tag);
+  const status = str(opts.status);
+  const q = str(opts.q);
+
   const filter = { is_deleted: false };
   // Hide archived queries (LRU-evicted or merged) from the active list, unless
   // archived ones are explicitly requested.
-  filter.is_archived = opts.status === QUERY_STATUS.ARCHIVED;
-  if (opts.category) filter.category = opts.category;
-  if (opts.tag) filter.tags = opts.tag;
-  if (opts.status) filter.status = opts.status;
-  if (opts.q) filter.$text = { $search: opts.q };
+  filter.is_archived = status === QUERY_STATUS.ARCHIVED;
+  if (category) filter.category = category;
+  if (tag) filter.tags = tag;
+  if (status) filter.status = status;
+  if (q) filter.$text = { $search: q };
 
   const limit = Math.min(Number(opts.limit) || 20, 50);
   const page = Math.max(Number(opts.page) || 1, 1);

@@ -5,12 +5,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const required = (key, fallback) => {
-  const value = process.env[key] ?? fallback;
-  if (value === undefined) {
-    throw new Error(`Missing required environment variable: ${key}`);
+const isProd = process.env.NODE_ENV === 'production';
+
+// Resolve a secret. In production the env var MUST be set to a non-default
+// value, otherwise we fail fast — a public repo's well-known dev fallback must
+// never silently secure a real deployment (it would allow token forgery).
+const secret = (key, devFallback) => {
+  const value = process.env[key];
+  if (isProd && (!value || value === devFallback)) {
+    throw new Error(
+      `${key} must be set to a strong, unique value in production (refusing to start with the dev default).`,
+    );
   }
-  return value;
+  return value || devFallback;
 };
 
 export const config = Object.freeze({
@@ -22,8 +29,8 @@ export const config = Object.freeze({
   mongoUri: process.env.MONGODB_URI ?? 'mongodb://localhost:27017/faq_platform',
 
   jwt: {
-    accessSecret: required('JWT_ACCESS_SECRET', 'dev-access-secret'),
-    refreshSecret: required('JWT_REFRESH_SECRET', 'dev-refresh-secret'),
+    accessSecret: secret('JWT_ACCESS_SECRET', 'dev-access-secret'),
+    refreshSecret: secret('JWT_REFRESH_SECRET', 'dev-refresh-secret'),
     accessTtl: process.env.JWT_ACCESS_TTL ?? '15m',
     refreshTtl: process.env.JWT_REFRESH_TTL ?? '7d',
   },

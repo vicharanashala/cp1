@@ -14,13 +14,36 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export function createApp() {
   const app = express();
 
+  // Baseline security headers. (For production, `helmet` is the recommended
+  // upgrade — this hand-rolled set keeps the MVP dependency-free while covering
+  // the headers that matter for an API + user-uploaded static files.)
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('X-DNS-Prefetch-Control', 'off');
+    res.removeHeader('X-Powered-By');
+    next();
+  });
+
   app.use(cors({ origin: config.clientOrigin, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   if (!config.isTest) app.use(morgan('dev'));
 
-  // Serve user uploads as static files (Multer writes here).
-  app.use('/uploads', express.static(path.join(__dirname, config.uploads.dir)));
+  // Serve user uploads as static files (Multer writes here). Force download +
+  // nosniff so a maliciously-named upload can never be rendered as HTML/script
+  // in the API origin (defence-in-depth against stored XSS via uploads).
+  app.use(
+    '/uploads',
+    express.static(path.join(__dirname, config.uploads.dir), {
+      index: false,
+      setHeaders: (res) => {
+        res.setHeader('Content-Disposition', 'attachment');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+      },
+    }),
+  );
 
   app.use('/api', routes);
 

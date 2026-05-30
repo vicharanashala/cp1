@@ -25,6 +25,6 @@ router.delete('/:id', auth, ctrl.remove);
 router.get('/:queryId/answers', optionalAuth, answerCtrl.list);
 router.post('/:queryId/answers', auth, banCheck, writeLimiter, answerCtrl.post);
 router.post('/:id/solution', auth, banCheck, answerCtrl.markSolution);
-router.post('/:id/report', auth, writeLimiter, answerCtrl.reportQuery);
+router.post('/:id/report', auth, banCheck, writeLimiter, answerCtrl.reportQuery);
 
 export default router;
