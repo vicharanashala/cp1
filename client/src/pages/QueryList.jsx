@@ -151,6 +151,14 @@ export default function QueryList() {
                 </Link>
                 <p className="q-excerpt">{excerpt(item.body)}</p>
                 <div className="q-card-foot">
+                  <span className="q-stat" title="votes">
+                    <span className="material-symbols-outlined">expand_less</span>
+                    {item.vote_score ?? 0}
+                  </span>
+                  <span className="q-stat" title="answers">
+                    <span className="material-symbols-outlined">forum</span>
+                    {item.answer_count ?? 0}
+                  </span>
                   <span className={`badge status-${item.status}`}>
                     {STATUS_LABELS[item.status] ?? item.status}
                   </span>

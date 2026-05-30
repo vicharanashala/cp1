@@ -1851,3 +1851,71 @@ select:focus,
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Milestone 13: voting + bookmarks ────────────────────────────────────── */
+.vote-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 4px;
+}
+.vote-btn:hover:not(:disabled) {
+  color: var(--primary);
+  background: var(--primary-tint);
+}
+.vote-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.vote-btn.on-up {
+  color: var(--primary);
+}
+.vote-btn.on-down {
+  color: var(--danger);
+}
+.vote-score {
+  font-weight: 700;
+  min-width: 1.4rem;
+  text-align: center;
+}
+
+/* Question engagement bar (vote + save) */
+.q-engage {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.vote-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.5rem;
+}
+.btn-secondary.is-saved {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-tint);
+}
+
+/* Forum card vote/answer stats */
+.q-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.q-stat .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+/* Answer vote rail (column of up / score / down) */
+.answer-rail .vote-btn .material-symbols-outlined {
+  font-size: 1.15rem;
+}

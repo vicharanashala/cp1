@@ -17,6 +17,11 @@ export const like = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+export const vote = asyncHandler(async (req, res) => {
+  const result = await answerService.setAnswerVote(req.user, req.params.id, Number(req.body?.value));
+  res.json(result);
+});
+
 export const remove = asyncHandler(async (req, res) => {
   const result = await answerService.deleteAnswer(req.user, req.params.id);
   res.json(result);

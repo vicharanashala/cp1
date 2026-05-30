@@ -1,5 +1,8 @@
 import crypto from 'node:crypto';
 import { Query } from '../models/Query.js';
+import { Answer } from '../models/Answer.js';
+import { Vote } from '../models/Vote.js';
+import { Bookmark } from '../models/Bookmark.js';
 import { ModerationQueue } from '../models/ModerationQueue.js';
 import { ai } from '../config/ai.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -151,7 +154,39 @@ export async function listQueries(opts = {}, viewerId) {
     Query.countDocuments(filter),
   ]);
 
-  return { items: items.map((it) => serialize(it, viewerId)), total, page, limit };
+  const enriched = await withEngagement(items, viewerId);
+  return { items: enriched, total, page, limit };
+}
+
+// Attach answer counts (aggregated) and the viewer's vote/bookmark state to a
+// page of queries — the data the forum cards + thread rails need.
+async function withEngagement(items, viewerId) {
+  if (items.length === 0) return [];
+  const ids = items.map((it) => it._id);
+
+  const counts = await Answer.aggregate([
+    { $match: { query_id: { $in: ids }, is_deleted: false } },
+    { $group: { _id: '$query_id', n: { $sum: 1 } } },
+  ]);
+  const countMap = new Map(counts.map((c) => [String(c._id), c.n]));
+
+  let voteMap = new Map();
+  let savedSet = new Set();
+  if (viewerId) {
+    const [votes, saves] = await Promise.all([
+      Vote.find({ user_id: viewerId, query_id: { $in: ids } }).lean(),
+      Bookmark.find({ user_id: viewerId, query_id: { $in: ids } }).lean(),
+    ]);
+    voteMap = new Map(votes.map((v) => [String(v.query_id), v.value]));
+    savedSet = new Set(saves.map((s) => String(s.query_id)));
+  }
+
+  return items.map((it) => ({
+    ...serialize(it, viewerId),
+    answer_count: countMap.get(String(it._id)) ?? 0,
+    my_vote: voteMap.get(String(it._id)) ?? 0,
+    is_saved: savedSet.has(String(it._id)),
+  }));
 }
 
 /** Fetch one query and record an LRU access touch. */
@@ -172,7 +207,76 @@ export async function getQuery(id, viewerId) {
     doc.is_archived = false;
   }
 
-  return serialize(doc, viewerId);
+  const base = serialize(doc, viewerId);
+  const [answerCount, myVote, saved] = await Promise.all([
+    Answer.countDocuments({ query_id: doc._id, is_deleted: false }),
+    viewerId ? Vote.findOne({ query_id: doc._id, user_id: viewerId }).lean() : null,
+    viewerId ? Bookmark.exists({ query_id: doc._id, user_id: viewerId }) : null,
+  ]);
+  return { ...base, answer_count: answerCount, my_vote: myVote?.value ?? 0, is_saved: Boolean(saved) };
+}
+
+/**
+ * Up/down vote a query. `value` is 1, -1, or 0 (clear); re-voting the same way
+ * toggles it off. Returns the new score and the viewer's vote. No reputation
+ * effect (only answer upvotes award points).
+ */
+export async function voteQuery(user, id, value) {
+  const v = Number(value);
+  const desired = v === 1 || v === -1 ? v : 0;
+
+  const query = await Query.findOne({ _id: id, is_deleted: false });
+  if (!query) throw ApiError.notFound('Query not found');
+  if (String(query.author_id) === String(user._id)) {
+    throw ApiError.badRequest('You cannot vote on your own question');
+  }
+
+  const existing = await Vote.findOne({ query_id: query._id, user_id: user._id });
+  const old = existing?.value ?? 0;
+  const next = desired === old ? 0 : desired; // re-voting the same way clears it
+
+  if (next === 0) {
+    if (existing) await existing.deleteOne();
+  } else if (existing) {
+    existing.value = next;
+    await existing.save();
+  } else {
+    await Vote.create({ query_id: query._id, user_id: user._id, value: next });
+  }
+
+  const delta = next - old;
+  query.vote_score = (query.vote_score ?? 0) + delta;
+  await query.save();
+
+  return { vote_score: query.vote_score, my_vote: next };
+}
+
+/** Toggle a bookmark on a query for the current user. */
+export async function toggleBookmark(user, id) {
+  const query = await Query.findOne({ _id: id, is_deleted: false });
+  if (!query) throw ApiError.notFound('Query not found');
+
+  const existing = await Bookmark.findOne({ query_id: query._id, user_id: user._id });
+  if (existing) {
+    await existing.deleteOne();
+    return { saved: false };
+  }
+  await Bookmark.create({ query_id: query._id, user_id: user._id });
+  return { saved: true };
+}
+
+/** List the queries a user has bookmarked (most recent first). */
+export async function listBookmarks(user) {
+  const marks = await Bookmark.find({ user_id: user._id }).sort({ createdAt: -1 }).lean();
+  if (marks.length === 0) return { items: [] };
+  const ids = marks.map((m) => m.query_id);
+  const items = await Query.find({ _id: { $in: ids }, is_deleted: false })
+    .populate('author_id', 'name')
+    .lean();
+  // Preserve bookmark order (most-recently saved first).
+  const order = new Map(ids.map((id2, i) => [String(id2), i]));
+  items.sort((a, b) => order.get(String(a._id)) - order.get(String(b._id)));
+  return { items: await withEngagement(items, String(user._id)) };
 }
 
 /** Edit a query (author only). Re-embeds when the text actually changes. */

@@ -70,53 +70,98 @@ export async function listAnswers(queryId, viewerId) {
     .populate('author_id', 'name')
     .lean();
 
-  let likedSet = new Set();
-  if (viewerId && answers.length) {
-    const likes = await Like.find({
-      user_id: viewerId,
-      answer_id: { $in: answers.map((a) => a._id) },
-    })
-      .select('answer_id')
-      .lean();
-    likedSet = new Set(likes.map((l) => String(l.answer_id)));
+  if (answers.length === 0) return [];
+  const ids = answers.map((a) => a._id);
+
+  // Downvote tallies (like_count tracks upvotes only) and the viewer's own vote.
+  const downs = await Like.aggregate([
+    { $match: { answer_id: { $in: ids }, value: -1 } },
+    { $group: { _id: '$answer_id', n: { $sum: 1 } } },
+  ]);
+  const downMap = new Map(downs.map((d) => [String(d._id), d.n]));
+
+  let myVotes = new Map();
+  if (viewerId) {
+    const mine = await Like.find({ user_id: viewerId, answer_id: { $in: ids } }).lean();
+    myVotes = new Map(mine.map((l) => [String(l.answer_id), l.value]));
   }
 
-  return answers.map((a) => ({
-    ...serializeAnswer(a, viewerId),
-    liked_by_me: likedSet.has(String(a._id)),
-  }));
+  return answers.map((a) => {
+    const myVote = myVotes.get(String(a._id)) ?? 0;
+    return {
+      ...serializeAnswer(a, viewerId),
+      my_vote: myVote,
+      liked_by_me: myVote === 1,
+      score: (a.like_count ?? 0) - (downMap.get(String(a._id)) ?? 0),
+    };
+  });
 }
 
-/** Toggle a like on an answer (one per user). Awards/removes the author's like points. */
-export async function toggleLike(user, answerId) {
+/**
+ * Set the current user's vote on an answer. `desired` is 1 (up), -1 (down), or
+ * 0 (clear); re-voting the same way toggles it off. `like_count` tracks upvotes
+ * only (so finalization ranking is unchanged), and ONLY upvotes move reputation
+ * — downvotes never deduct the author's points (avoids griefing).
+ * @returns {{ value, like_count, score, liked }}
+ */
+export async function setAnswerVote(user, answerId, desired) {
+  const want = desired === 1 || desired === -1 ? desired : 0;
+
   const answer = await Answer.findOne({ _id: answerId, is_deleted: false });
   if (!answer) throw ApiError.notFound('Answer not found');
   if (String(answer.author_id) === String(user._id)) {
-    throw ApiError.badRequest('You cannot like your own answer');
+    throw ApiError.badRequest('You cannot vote on your own answer');
   }
 
   const existing = await Like.findOne({ answer_id: answer._id, user_id: user._id });
-  if (existing) {
-    await existing.deleteOne();
-    answer.like_count = Math.max(0, answer.like_count - 1);
-    await answer.save();
-    await awardPoints(answer.author_id, -POINTS.ANSWER_LIKED);
-    return { liked: false, like_count: answer.like_count };
+  const old = existing?.value ?? 0;
+  const next = want === old ? 0 : want; // re-voting the same way clears it
+
+  if (next === 0) {
+    if (existing) await existing.deleteOne();
+  } else if (existing) {
+    existing.value = next;
+    await existing.save();
+  } else {
+    await Like.create({ answer_id: answer._id, user_id: user._id, value: next });
   }
 
-  await Like.create({ answer_id: answer._id, user_id: user._id });
-  answer.like_count += 1;
-  await answer.save();
-  await awardPoints(answer.author_id, POINTS.ANSWER_LIKED);
-  await notify({
-    recipientId: answer.author_id,
-    type: NOTIFICATION_TYPE.LIKE,
-    title: 'Someone liked your answer',
-    link: `/queries/${answer.query_id}`,
-    queryId: answer.query_id,
-    answerId: answer._id,
-  });
-  return { liked: true, like_count: answer.like_count };
+  // Upvote count drives like_count + reputation; downvotes affect neither.
+  const upDelta = (next === 1 ? 1 : 0) - (old === 1 ? 1 : 0);
+  if (upDelta !== 0) {
+    answer.like_count = Math.max(0, answer.like_count + upDelta);
+    await answer.save();
+    await awardPoints(answer.author_id, POINTS.ANSWER_LIKED * upDelta);
+  }
+
+  // Notify the author only on a brand-new upvote.
+  if (next === 1 && old !== 1) {
+    await notify({
+      recipientId: answer.author_id,
+      type: NOTIFICATION_TYPE.LIKE,
+      title: 'Someone liked your answer',
+      link: `/queries/${answer.query_id}`,
+      queryId: answer.query_id,
+      answerId: answer._id,
+    });
+  }
+
+  const downCount = await Like.countDocuments({ answer_id: answer._id, value: -1 });
+  return {
+    value: next,
+    like_count: answer.like_count,
+    score: answer.like_count - downCount,
+    liked: next === 1,
+  };
+}
+
+/**
+ * Legacy upvote toggle, preserved for the `/answers/:id/like` endpoint. Returns
+ * the exact `{ liked, like_count }` shape callers/tests depend on.
+ */
+export async function toggleLike(user, answerId) {
+  const res = await setAnswerVote(user, answerId, 1);
+  return { liked: res.liked, like_count: res.like_count };
 }
 
 /** Soft-delete an answer (author or admin). */

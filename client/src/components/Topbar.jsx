@@ -82,6 +82,9 @@ export default function Topbar({ onToggleNav }) {
                   <Link to={`/users/${user.id}`} onClick={() => setMenuOpen(false)}>
                     <span className="material-symbols-outlined">person</span> Profile
                   </Link>
+                  <Link to="/saved" onClick={() => setMenuOpen(false)}>
+                    <span className="material-symbols-outlined">bookmark</span> Saved
+                  </Link>
                   <Link to="/settings" onClick={() => setMenuOpen(false)}>
                     <span className="material-symbols-outlined">settings</span> Settings
                   </Link>

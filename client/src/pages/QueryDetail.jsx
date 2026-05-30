@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getQuery, deleteQuery } from '../api/queries.js';
+import { getQuery, deleteQuery, voteQuery, saveQuery } from '../api/queries.js';
 import {
   listAnswers,
   postAnswer,
-  likeAnswer,
+  voteAnswer,
   deleteAnswer,
   markSolution,
   reportQuery,
@@ -79,6 +79,21 @@ export default function QueryDetail() {
     }
   };
 
+  // The server toggles a repeat vote off, so just send the direction.
+  const onVoteQuery = async (value) => {
+    try {
+      const res = await voteQuery(id, value);
+      setQuery((q) => ({ ...q, vote_score: res.vote_score, my_vote: res.my_vote }));
+    } catch (err) {
+      window.alert(err.response?.data?.error ?? 'Could not record your vote.');
+    }
+  };
+
+  const onToggleSave = async () => {
+    const res = await saveQuery(id);
+    setQuery((q) => ({ ...q, is_saved: res.saved }));
+  };
+
   const resolved = query?.status === 'resolved';
 
   if (loading) return <div className="container">Loading…</div>;
@@ -127,6 +142,41 @@ export default function QueryDetail() {
         <span className="by">
           <Author author={query.author} /> · {relativeTime(query.createdAt)}
         </span>
+      </div>
+
+      <div className="q-engage">
+        {!query.is_owner && (
+          <div className="vote-inline">
+            <button
+              className={`vote-btn ${query.my_vote === 1 ? 'on-up' : ''}`}
+              disabled={!user}
+              onClick={() => onVoteQuery(1)}
+              title="Upvote"
+            >
+              <span className="material-symbols-outlined">thumb_up</span>
+            </button>
+            <span className="vote-score">{query.vote_score ?? 0}</span>
+            <button
+              className={`vote-btn ${query.my_vote === -1 ? 'on-down' : ''}`}
+              disabled={!user}
+              onClick={() => onVoteQuery(-1)}
+              title="Downvote"
+            >
+              <span className="material-symbols-outlined">thumb_down</span>
+            </button>
+          </div>
+        )}
+        {user && (
+          <button
+            className={`btn-secondary ${query.is_saved ? 'is-saved' : ''}`}
+            onClick={onToggleSave}
+          >
+            <span className="material-symbols-outlined">
+              {query.is_saved ? 'bookmark' : 'bookmark_add'}
+            </span>
+            {query.is_saved ? 'Saved' : 'Save'}
+          </button>
+        )}
       </div>
 
       {query.is_flagged_duplicate && (
@@ -185,7 +235,7 @@ export default function QueryDetail() {
             key={a.id}
             answer={a}
             canAccept={query.is_owner && !resolved}
-            canLike={Boolean(user) && !a.is_owner}
+            canVote={Boolean(user) && !a.is_owner}
             onChange={loadAll}
             queryId={id}
           />
@@ -199,13 +249,13 @@ export default function QueryDetail() {
   );
 }
 
-function AnswerCard({ answer, canAccept, canLike, onChange, queryId }) {
+function AnswerCard({ answer, canAccept, canVote, onChange, queryId }) {
   const [busy, setBusy] = useState(false);
 
-  const onLike = async () => {
+  const onVote = async (value) => {
     setBusy(true);
     try {
-      await likeAnswer(answer.id);
+      await voteAnswer(answer.id, value);
       await onChange();
     } finally {
       setBusy(false);
@@ -239,13 +289,21 @@ function AnswerCard({ answer, canAccept, canLike, onChange, queryId }) {
     <article className={`answer-card ${answer.is_accepted ? 'accepted' : ''}`}>
       <div className="answer-rail">
         <button
-          className={`like-btn ${answer.liked_by_me ? 'on' : ''}`}
-          onClick={onLike}
-          disabled={!canLike || busy}
-          title={canLike ? 'Like this answer' : 'You cannot like this answer'}
+          className={`vote-btn ${answer.my_vote === 1 ? 'on-up' : ''}`}
+          onClick={() => onVote(1)}
+          disabled={!canVote || busy}
+          title={canVote ? 'Upvote' : 'You cannot vote on this answer'}
         >
           <span className="material-symbols-outlined">thumb_up</span>
-          {answer.like_count}
+        </button>
+        <span className="vote-score">{answer.score ?? answer.like_count ?? 0}</span>
+        <button
+          className={`vote-btn ${answer.my_vote === -1 ? 'on-down' : ''}`}
+          onClick={() => onVote(-1)}
+          disabled={!canVote || busy}
+          title={canVote ? 'Downvote' : 'You cannot vote on this answer'}
+        >
+          <span className="material-symbols-outlined">thumb_down</span>
         </button>
         {answer.is_accepted && (
           <span className="accepted-mark material-symbols-outlined" title="Accepted answer">
