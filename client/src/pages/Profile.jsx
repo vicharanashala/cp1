@@ -32,7 +32,17 @@ export default function Profile() {
       <div className="profile-head">
         <h1>{profile.name}</h1>
         <span className="points-pill">{profile.points} pts</span>
+        {profile.standing && (
+          <span className="chip">
+            {profile.standing.tier.icon} {profile.standing.tier.label}
+          </span>
+        )}
       </div>
+      {profile.standing && !profile.standing.is_max && (
+        <p className="muted small">
+          {profile.standing.pts_to_next} pts to {profile.standing.next.label}
+        </p>
+      )}
 
       {profile.is_banned && (
         <div className="alert">

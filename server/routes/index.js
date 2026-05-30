@@ -19,6 +19,7 @@ router.get('/health', (_req, res) => {
     status: 'ok',
     db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     ai: ai.mockMode ? 'mock' : 'live',
+    uptime_seconds: Math.round(process.uptime()),
     time: new Date().toISOString(),
   });
 });

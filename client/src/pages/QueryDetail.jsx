@@ -9,6 +9,8 @@ import {
   markSolution,
   reportQuery,
   reportAnswer,
+  addComment,
+  deleteComment,
 } from '../api/answers.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { promoteQuery } from '../api/faq.js';
@@ -236,6 +238,7 @@ export default function QueryDetail() {
             answer={a}
             canAccept={query.is_owner && !resolved}
             canVote={Boolean(user) && !a.is_owner}
+            canComment={Boolean(user)}
             onChange={loadAll}
             queryId={id}
           />
@@ -249,7 +252,7 @@ export default function QueryDetail() {
   );
 }
 
-function AnswerCard({ answer, canAccept, canVote, onChange, queryId }) {
+function AnswerCard({ answer, canAccept, canVote, canComment, onChange, queryId }) {
   const [busy, setBusy] = useState(false);
 
   const onVote = async (value) => {
@@ -336,8 +339,66 @@ function AnswerCard({ answer, canAccept, canVote, onChange, queryId }) {
             </button>
           )}
         </div>
+        <AnswerComments answer={answer} canComment={canComment} onChange={onChange} />
       </div>
     </article>
+  );
+}
+
+function AnswerComments({ answer, canComment, onChange }) {
+  const [text, setText] = useState('');
+  const [open, setOpen] = useState(false);
+  const comments = answer.comments ?? [];
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    await addComment(answer.id, text.trim());
+    setText('');
+    setOpen(false);
+    await onChange();
+  };
+
+  const remove = async (id) => {
+    await deleteComment(id);
+    await onChange();
+  };
+
+  return (
+    <div className="comments">
+      {comments.map((c) => (
+        <div key={c.id} className="comment">
+          <span className="comment-body">{c.body}</span>
+          <span className="comment-meta">
+            — {c.author?.name ?? 'Unknown'}
+            {c.is_owner && (
+              <button className="comment-del" onClick={() => remove(c.id)} title="Delete comment">
+                ×
+              </button>
+            )}
+          </span>
+        </div>
+      ))}
+      {canComment &&
+        (open ? (
+          <form className="comment-form" onSubmit={submit}>
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Add a comment…"
+              maxLength={1000}
+              autoFocus
+            />
+            <button className="btn-ghost" disabled={!text.trim()}>
+              Comment
+            </button>
+          </form>
+        ) : (
+          <button className="btn-ghost add-comment" onClick={() => setOpen(true)}>
+            + Add a comment
+          </button>
+        ))}
+    </div>
   );
 }
 
@@ -348,6 +409,7 @@ function Author({ author }) {
     <span className="author-inline">
       <span className="avatar-sm">{initials(name)}</span>
       {author.anonymous || !author.id ? name : <Link to={`/users/${author.id}`}>{name}</Link>}
+      {author.points != null && <span className="rep-mini" title="reputation">{author.points}</span>}
     </span>
   );
 }

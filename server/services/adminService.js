@@ -35,7 +35,18 @@ export async function getMetrics() {
       FaqEntry.countDocuments({ is_deleted: false }),
       ModerationQueue.countDocuments({ status: MODERATION_STATUS.PENDING }),
     ]);
-  return { users, banned, queries, open, resolved, answers, faqs, pending_moderation: pendingModeration };
+  const resolution_rate = queries ? Math.round((resolved / queries) * 1000) / 10 : 0;
+  return {
+    users,
+    banned,
+    queries,
+    open,
+    resolved,
+    answers,
+    faqs,
+    pending_moderation: pendingModeration,
+    resolution_rate,
+  };
 }
 
 /** Paginated user list with optional name/email search. */

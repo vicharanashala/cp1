@@ -1,6 +1,7 @@
 import { Answer } from '../models/Answer.js';
 import { Query } from '../models/Query.js';
 import { Like } from '../models/Like.js';
+import { Comment } from '../models/Comment.js';
 import { ModerationQueue } from '../models/ModerationQueue.js';
 import { ApiError } from '../utils/ApiError.js';
 import { notify } from './notificationService.js';
@@ -23,8 +24,19 @@ function serializeAnswer(obj, viewerId) {
   return {
     ...rest,
     id: plain._id,
-    author: { id: authorId ?? null, name: authorRef?.name ?? null },
+    author: { id: authorId ?? null, name: authorRef?.name ?? null, points: authorRef?.points ?? null },
     is_owner: isOwner,
+  };
+}
+
+function serializeComment(c, viewerId) {
+  const authorId = c.author_id?._id ?? c.author_id;
+  return {
+    id: c._id,
+    body: c.body,
+    author: { id: authorId ?? null, name: c.author_id?.name ?? null },
+    createdAt: c.createdAt,
+    is_owner: Boolean(viewerId && authorId && String(authorId) === String(viewerId)),
   };
 }
 
@@ -59,7 +71,7 @@ export async function postAnswer(user, queryId, body) {
     });
   }
 
-  await answer.populate('author_id', 'name');
+  await answer.populate('author_id', 'name points');
   return serializeAnswer(answer, user._id);
 }
 
@@ -67,7 +79,7 @@ export async function postAnswer(user, queryId, body) {
 export async function listAnswers(queryId, viewerId) {
   const answers = await Answer.find({ query_id: queryId, is_deleted: false })
     .sort({ is_accepted: -1, like_count: -1, createdAt: 1 })
-    .populate('author_id', 'name')
+    .populate('author_id', 'name points')
     .lean();
 
   if (answers.length === 0) return [];
@@ -86,6 +98,18 @@ export async function listAnswers(queryId, viewerId) {
     myVotes = new Map(mine.map((l) => [String(l.answer_id), l.value]));
   }
 
+  // Threaded comments, grouped per answer (oldest first).
+  const comments = await Comment.find({ answer_id: { $in: ids }, is_deleted: false })
+    .sort({ createdAt: 1 })
+    .populate('author_id', 'name')
+    .lean();
+  const commentMap = new Map();
+  for (const c of comments) {
+    const key = String(c.answer_id);
+    if (!commentMap.has(key)) commentMap.set(key, []);
+    commentMap.get(key).push(serializeComment(c, viewerId));
+  }
+
   return answers.map((a) => {
     const myVote = myVotes.get(String(a._id)) ?? 0;
     return {
@@ -93,8 +117,51 @@ export async function listAnswers(queryId, viewerId) {
       my_vote: myVote,
       liked_by_me: myVote === 1,
       score: (a.like_count ?? 0) - (downMap.get(String(a._id)) ?? 0),
+      comments: commentMap.get(String(a._id)) ?? [],
     };
   });
+}
+
+/** Add a comment under an answer. */
+export async function addComment(user, answerId, body) {
+  const text = String(body ?? '').trim();
+  if (!text) throw ApiError.badRequest('Comment cannot be empty');
+
+  const answer = await Answer.findOne({ _id: answerId, is_deleted: false });
+  if (!answer) throw ApiError.notFound('Answer not found');
+
+  const comment = await Comment.create({
+    answer_id: answer._id,
+    author_id: user._id,
+    body: text.slice(0, 1000),
+  });
+
+  if (String(answer.author_id) !== String(user._id)) {
+    await notify({
+      recipientId: answer.author_id,
+      type: NOTIFICATION_TYPE.COMMENT,
+      title: 'New comment on your answer',
+      link: `/queries/${answer.query_id}`,
+      queryId: answer.query_id,
+      answerId: answer._id,
+    });
+  }
+
+  await comment.populate('author_id', 'name');
+  return serializeComment(comment, String(user._id));
+}
+
+/** Soft-delete a comment (author or admin). */
+export async function deleteComment(user, commentId) {
+  const comment = await Comment.findOne({ _id: commentId, is_deleted: false });
+  if (!comment) throw ApiError.notFound('Comment not found');
+  if (String(comment.author_id) !== String(user._id) && user.role !== ROLES.ADMIN) {
+    throw ApiError.forbidden('You can only delete your own comment');
+  }
+  comment.is_deleted = true;
+  comment.deleted_at = new Date();
+  await comment.save();
+  return { ok: true };
 }
 
 /**

@@ -29,6 +29,7 @@ export const MODERATION_STATUS = Object.freeze({
 
 export const NOTIFICATION_TYPE = Object.freeze({
   ANSWER: 'answer',
+  COMMENT: 'comment',
   LIKE: 'like',
   ACCEPT: 'accept',
   RESOLUTION: 'resolution',

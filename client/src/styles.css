@@ -1919,3 +1919,120 @@ select:focus,
 .answer-rail .vote-btn .material-symbols-outlined {
   font-size: 1.15rem;
 }
+
+/* ─── Milestone 14: activity, comments, settings, standing ────────────────── */
+.dash-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.activity-card .card-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.activity-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.activity-list li:last-child {
+  border-bottom: none;
+}
+.act-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--primary-tint);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.act-tag.act-answer {
+  background: #dcfce7;
+  color: var(--success);
+}
+.act-tag.act-saved {
+  background: #fef3c7;
+  color: var(--warning);
+}
+.act-title {
+  flex: 1;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.act-when {
+  flex-shrink: 0;
+}
+
+/* Author reputation chip */
+.rep-mini {
+  background: var(--primary-tint);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+
+/* Comments under an answer */
+.comments {
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.comment {
+  font-size: 0.85rem;
+}
+.comment-body {
+  color: var(--text);
+}
+.comment-meta {
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+.comment-del {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 0.2rem;
+}
+.comment-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.comment-form input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.85rem;
+}
+.add-comment {
+  align-self: flex-start;
+  font-size: 0.82rem;
+}
+
+/* Profile standing */
+.profile-head .chip {
+  font-size: 0.8rem;
+}

@@ -47,7 +47,12 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  const value = { user, loading, login, register, logout, isAdmin: user?.role === 'admin' };
+  // Merge fields into the current user (e.g. after a settings update).
+  const updateUser = useCallback((patch) => {
+    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
+  const value = { user, loading, login, register, logout, updateUser, isAdmin: user?.role === 'admin' };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
