@@ -24,7 +24,7 @@
 | — | **Phase 2 — Frozen Precision redesign** | _frontend parity + the backend it implies_ | |
 | 9 | Design system & app shell | Light theme tokens + sidebar shell (FE) | `[x]` |
 | 10 | Home & FAQ re-skin | Dashboard + FAQ to reference (FE) | `[x]` |
-| 11 | Forum & thread re-skin | Filters/sort/pagination + Markdown (FE) | `[ ]` |
+| 11 | Forum & thread re-skin | Filters/sort/pagination + Markdown (FE) | `[x]` |
 | 12 | Admin dashboard re-skin | KPIs + needs-attention + audit feed (FE) | `[ ]` |
 | 13 | Engagement backend | Votes, bookmarks, answer counts (BE+FE) | `[ ]` |
 | 14 | Activity/comments/settings | Feed, replies, settings, avatars (BE+FE) | `[ ]` |
@@ -201,12 +201,12 @@ Goal: match the reference Home + FAQ screens. **Frontend-only (existing APIs).**
 
 Goal: match Community Discussions + Question Thread. **Frontend (existing APIs) + Markdown.**
 
-- [ ] Forum list: filter dropdowns (category / tag / status — already supported by `listQueries`), "Newest First" sort, **pagination control** (`total/page/limit` already returned)
-- [ ] Forum list: card layout with status badge, body excerpt, author initials + relative time
-- [ ] Question thread: re-skin to the reference; answer sort toggle ("Highest Voted" is already the default order)
-- [ ] **Rich-text answer composer toolbar** (bold / italic / code / link) + **Markdown & code-block rendering** for questions/answers (e.g. `react-markdown` + highlighter)
-- [ ] Preserve existing actions: like, mark solution, report, edit/delete, promote-to-FAQ
-- [ ] _Question votes / downvotes / answer-count badges / replies deferred to M13–14_
+- [x] Forum list: filter controls (status dropdown; category/tag as filter inputs — categories aren't enumerated server-side) + URL-driven (so global search `?q=` works), "Newest First" sort label, **pagination control** (`total/page/limit`)
+- [x] Forum list: card layout with status badge, body excerpt, author initials + relative time
+- [x] Question thread: re-skin to the reference; answer **sort toggle** (Highest voted / Newest)
+- [x] **Rich-text answer composer toolbar** (bold / italic / code / link) + **Markdown & code-block rendering** for questions/answers (`react-markdown` + `remark-gfm` + `rehype-highlight`, lazy-split chunk)
+- [x] Preserve existing actions: like, mark solution, report, edit/delete, promote-to-FAQ
+- [~] _Question votes / downvotes / answer-count badges / replies deferred to M13–14_
 
 ## Milestone 12 — Admin dashboard re-skin
 
