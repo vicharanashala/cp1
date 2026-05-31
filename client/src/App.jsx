@@ -15,6 +15,7 @@ import Profile from './pages/Profile.jsx';
 import Faq from './pages/Faq.jsx';
 import Settings from './pages/Settings.jsx';
 import Support from './pages/Support.jsx';
+import Saved from './pages/Saved.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import AdminOverview from './pages/admin/AdminOverview.jsx';
 import AdminModeration from './pages/admin/AdminModeration.jsx';
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/faq" element={<Faq />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/saved" element={<Saved />} />
           <Route path="/users/:id" element={<Profile />} />
           <Route
             path="/ask"

@@ -31,3 +31,18 @@ export const checkGrammar = asyncHandler(async (req, res) => {
   const result = await queryService.checkGrammar(req.body?.text);
   res.json(result);
 });
+
+export const vote = asyncHandler(async (req, res) => {
+  const result = await queryService.voteQuery(req.user, req.params.id, req.body?.value);
+  res.json(result);
+});
+
+export const save = asyncHandler(async (req, res) => {
+  const result = await queryService.toggleBookmark(req.user, req.params.id);
+  res.json(result);
+});
+
+export const bookmarks = asyncHandler(async (req, res) => {
+  const result = await queryService.listBookmarks(req.user);
+  res.json(result);
+});

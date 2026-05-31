@@ -26,7 +26,7 @@
 | 10 | Home & FAQ re-skin | Dashboard + FAQ to reference (FE) | `[x]` |
 | 11 | Forum & thread re-skin | Filters/sort/pagination + Markdown (FE) | `[x]` |
 | 12 | Admin dashboard re-skin | KPIs + needs-attention + audit feed (FE) | `[x]` |
-| 13 | Engagement backend | Votes, bookmarks, answer counts (BE+FE) | `[ ]` |
+| 13 | Engagement backend | Votes, bookmarks, answer counts (BE+FE) | `[x]` |
 | 14 | Activity/comments/settings | Feed, replies, settings, avatars (BE+FE) | `[ ]` |
 
 ---
@@ -221,11 +221,11 @@ Goal: match the "System Overview" screen. **Frontend (existing APIs + small deri
 
 Goal: the data the reference cards & threads imply. **Backend + UI wiring.**
 
-- [ ] **Answer counts** on `listQueries` (aggregation or denormalized counter) → show on forum cards
-- [ ] **Question voting** (decision: up/down on queries) — model/fields + endpoints + UI vote rail
-- [ ] **Answer downvote** — extend likes into signed votes (or keep upvote + add downvote) + UI
-- [ ] **Save / bookmark questions** — `Bookmark` model + create/delete/list endpoints + bookmark button on the thread
-- [ ] Tests for every new endpoint; lint / test / build green
+- [x] **Answer counts** on `listQueries` (aggregation) → shown on forum cards + detail
+- [x] **Question voting** (up/down on queries) — `Vote` model + `vote_score` + `/queries/:id/vote` + thread vote rail + forum-card score (no reputation effect)
+- [x] **Answer downvote** — extended `Like` with a signed `value`; `/answers/:id/vote`; `/like` kept byte-compatible (upvotes still drive `like_count` + reputation; downvotes affect neither)
+- [x] **Save / bookmark questions** — `Bookmark` model + `/queries/:id/save` + `/queries/bookmarks` + Save button on the thread + a `/saved` page
+- [x] Tests for every new endpoint (`engagement.test.js`, 4 cases → 54 server tests); lint / build green
 
 ## Milestone 14 — Activity, comments, settings & profile backend
 
