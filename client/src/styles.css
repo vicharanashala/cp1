@@ -2051,6 +2051,15 @@ select:focus,
   max-width: 420px;
 }
 
+/* Large, full-width primary button (auth screens). */
+.btn-lg {
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
 /* --- Password show/hide --- */
 .pw-field {
   position: relative;

@@ -61,7 +61,7 @@ export default function Register() {
             </button>
           </span>
         </label>
-        <button className="btn-primary" disabled={busy}>
+        <button className="btn-primary btn-lg" disabled={busy}>
           {busy ? 'Creating…' : 'Sign up'}
         </button>
       </form>

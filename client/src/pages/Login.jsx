@@ -57,7 +57,7 @@ export default function Login() {
             </button>
           </span>
         </label>
-        <button className="btn-primary" disabled={busy}>
+        <button className="btn-primary btn-lg" disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}
         </button>
       </form>
