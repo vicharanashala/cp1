@@ -8,7 +8,7 @@ import { writeLimiter } from '../middleware/rateLimit.js';
 const router = Router();
 
 router.post('/:id/like', auth, banCheck, writeLimiter, ctrl.like);
-router.post('/:id/report', auth, writeLimiter, ctrl.reportAnswer);
+router.post('/:id/report', auth, banCheck, writeLimiter, ctrl.reportAnswer);
 router.delete('/:id', auth, ctrl.remove);
 
 export default router;

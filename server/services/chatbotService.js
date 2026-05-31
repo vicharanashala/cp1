@@ -48,10 +48,26 @@ async function compose(prompt, grounded) {
 async function getOrCreateSession(token, userId) {
   if (token) {
     const existing = await ChatbotSession.findOne({ session_token: token });
-    if (existing) return existing;
+    if (existing) {
+      const owner = existing.user_id ? String(existing.user_id) : null;
+      // Reuse only an anonymous session or one owned by this same user —
+      // never let a caller append to another user's session by replaying
+      // their token. A logged-in user may claim an anonymous session.
+      if (!owner) {
+        if (userId) {
+          existing.user_id = userId;
+          await existing.save();
+        }
+        return existing;
+      }
+      if (userId && owner === String(userId)) return existing;
+      // Token belongs to a different user → ignore it and start fresh.
+    }
   }
+  // Always mint a fresh, unguessable token server-side (prevents session
+  // fixation via a client-chosen token).
   return ChatbotSession.create({
-    session_token: token || crypto.randomUUID(),
+    session_token: crypto.randomUUID(),
     user_id: userId ?? null,
   });
 }
@@ -126,8 +142,13 @@ export async function ask({ sessionToken, userId, message }) {
 }
 
 /** Load a chat session's history (empty shell if the token is unknown). */
-export async function getSession(token) {
+export async function getSession(token, viewerId) {
   const session = await ChatbotSession.findOne({ session_token: token }).lean();
   if (!session) return { session_token: token, messages: [] };
+  // A user-owned session may only be read by its owner; anonymous sessions
+  // remain readable by anyone holding the (unguessable) token.
+  if (session.user_id && String(session.user_id) !== String(viewerId ?? '')) {
+    throw ApiError.forbidden('This chat session belongs to another user');
+  }
   return { session_token: session.session_token, messages: session.messages };
 }

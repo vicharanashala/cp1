@@ -7,6 +7,6 @@ import { aiLimiter } from '../middleware/rateLimit.js';
 const router = Router();
 
 router.post('/ask', optionalAuth, aiLimiter, ctrl.ask);
-router.get('/session/:token', ctrl.session);
+router.get('/session/:token', optionalAuth, ctrl.session);
 
 export default router;

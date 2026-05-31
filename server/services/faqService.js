@@ -12,7 +12,7 @@ const strip = ({ embedding, __v, ...rest }) => ({ ...rest, id: rest._id }); // h
 /** All FAQ entries grouped by category, ordered for the accordion UI. */
 export async function listFaqs({ category } = {}) {
   const filter = { is_deleted: false };
-  if (category) filter.category = category;
+  if (category) filter.category = String(category); // coerce: avoid operator injection
 
   const entries = await FaqEntry.find(filter).sort({ category: 1, sort_order: 1, createdAt: 1 }).lean();
 

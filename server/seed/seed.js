@@ -3,6 +3,7 @@
 // with zero live AI calls (PLANNING §8). Idempotent: re-running skips existing
 // records. Run with `npm run seed`.
 import crypto from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import { connectDB, disconnectDB } from '../config/db.js';
 import { ai } from '../config/ai.js';
 import { User } from '../models/User.js';
@@ -206,7 +207,8 @@ async function run() {
 }
 
 // Run only when invoked directly (not when imported by other seeds/tests).
-if (import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL handles Windows paths correctly (file:///C:/… vs file://C:\…).
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   run().catch((err) => {
     // eslint-disable-next-line no-console
     console.error('[seed] failed', err);
