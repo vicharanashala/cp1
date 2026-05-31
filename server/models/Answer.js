@@ -18,6 +18,11 @@ const answerSchema = new mongoose.Schema(
     like_count: { type: Number, default: 0 },
     is_accepted: { type: Boolean, default: false },
 
+    // Endorsement by the question author — distinct from the single accepted
+    // solution; multiple answers can be marked "helpful" and it stays on the thread.
+    is_helpful: { type: Boolean, default: false },
+    helpful_at: { type: Date, default: null },
+
     // Admin verification.
     is_verified: { type: Boolean, default: false },
     verified_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

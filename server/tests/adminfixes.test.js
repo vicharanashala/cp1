@@ -4,6 +4,7 @@ import request from 'supertest';
 import { createApp } from '../app.js';
 import { setupTestDB, teardownTestDB, clearDB } from './helpers.js';
 import { User } from '../models/User.js';
+import { awardPoints } from '../services/badgeService.js';
 
 const app = createApp();
 
@@ -126,6 +127,55 @@ describe('admin badge control', () => {
 
     profile = await request(app).get(`/api/users/${target.user.id}`);
     expect(profile.body.user.custom_badges).toHaveLength(0);
+  });
+});
+
+describe('expert flags a question for admin attention', () => {
+  test('expert can flag, a non-expert cannot, and admin sees it in the queue', async () => {
+    const asker = await makeUser('Asker');
+    const expert = await makeUser('Expert');
+    await awardPoints(expert.user.id, 500); // unlocks the Expert badge
+    const admin = await makeAdmin();
+    const query = await createQuery(asker.token);
+
+    const denied = await authed(request(app).post(`/api/queries/${query.id}/attention`), asker.token).send();
+    expect(denied.status).toBe(403);
+
+    const flagged = await authed(request(app).post(`/api/queries/${query.id}/attention`), expert.token).send();
+    expect(flagged.status).toBe(200);
+    expect(flagged.body.needs_attention).toBe(true);
+
+    const queue = await authed(request(app).get('/api/admin/queries/attention'), admin.token);
+    expect(queue.status).toBe(200);
+    expect(queue.body.items.some((i) => String(i.id) === String(query.id))).toBe(true);
+
+    const cleared = await authed(
+      request(app).post(`/api/admin/queries/${query.id}/clear-attention`),
+      admin.token,
+    ).send();
+    expect(cleared.status).toBe(200);
+    const after = await authed(request(app).get('/api/admin/queries/attention'), admin.token);
+    expect(after.body.items).toHaveLength(0);
+  });
+});
+
+describe('"user found helpful" endorsement', () => {
+  test('only the asker can mark an answer helpful, and it persists on the thread', async () => {
+    const asker = await makeUser('Asker');
+    const answerer = await makeUser('Answerer');
+    const other = await makeUser('Other');
+    const query = await createQuery(asker.token);
+    const answer = await postAnswer(answerer.token, query.id);
+
+    const denied = await authed(request(app).post(`/api/answers/${answer.id}/helpful`), other.token).send();
+    expect(denied.status).toBe(403);
+
+    const marked = await authed(request(app).post(`/api/answers/${answer.id}/helpful`), asker.token).send();
+    expect(marked.status).toBe(200);
+    expect(marked.body.is_helpful).toBe(true);
+
+    const list = await request(app).get(`/api/queries/${query.id}/answers`);
+    expect(list.body.answers[0].is_helpful).toBe(true);
   });
 });
 

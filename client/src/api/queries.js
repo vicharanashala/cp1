@@ -59,6 +59,12 @@ export async function saveQuery(id) {
   return data;
 }
 
+// Flag a question for admin attention (Expert-only). Returns { needs_attention }.
+export async function flagAttention(id) {
+  const { data } = await api.post(`/queries/${id}/attention`);
+  return data;
+}
+
 // The current user's bookmarked questions.
 export async function getBookmarks() {
   const { data } = await api.get('/queries/bookmarks');

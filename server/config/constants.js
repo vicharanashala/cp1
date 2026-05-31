@@ -51,6 +51,9 @@ export const POSITIVE_BADGES = Object.freeze([
   { key: 'legend', label: 'Legend', icon: '🏆', threshold: 1000 },
 ]);
 
+// The badge key a member must hold to flag a question for admin attention.
+export const ATTENTION_FLAG_BADGE_KEY = 'expert';
+
 // Negative badges (admin-issued).
 export const NEGATIVE_BADGES = Object.freeze({
   WARNING: { key: 'warning', label: 'Warning', icon: '⚠️' },

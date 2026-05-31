@@ -43,6 +43,11 @@ const querySchema = new mongoose.Schema(
 
     reports: { type: [reportSchema], default: [] },
 
+    // Escalation: an Expert-level member can flag a question for admin attention.
+    needs_attention: { type: Boolean, default: false, index: true },
+    attention_flagged_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    attention_flagged_at: { type: Date, default: null },
+
     // Community voting (net up/down score; individual votes live in `votes`).
     vote_score: { type: Number, default: 0 },
 

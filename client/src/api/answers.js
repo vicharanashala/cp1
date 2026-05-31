@@ -27,6 +27,12 @@ export async function deleteAnswer(answerId) {
   return data;
 }
 
+// Toggle the "user found helpful" endorsement (question author only).
+export async function markHelpful(answerId) {
+  const { data } = await api.post(`/answers/${answerId}/helpful`);
+  return data; // { is_helpful }
+}
+
 export async function addComment(answerId, body) {
   const { data } = await api.post(`/answers/${answerId}/comments`, { body });
   return data.comment;

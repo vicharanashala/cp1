@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getQuery, deleteQuery, voteQuery, saveQuery } from '../api/queries.js';
+import { getQuery, deleteQuery, voteQuery, saveQuery, flagAttention } from '../api/queries.js';
 import {
   listAnswers,
   postAnswer,
   voteAnswer,
   deleteAnswer,
   markSolution,
+  markHelpful,
   reportQuery,
   reportAnswer,
   addComment,
@@ -96,7 +97,19 @@ export default function QueryDetail() {
     setQuery((q) => ({ ...q, is_saved: res.saved }));
   };
 
+  const onFlagAttention = async () => {
+    try {
+      await flagAttention(id);
+      setQuery((q) => ({ ...q, needs_attention: true }));
+      window.alert('Flagged for admin attention. Thanks!');
+    } catch (err) {
+      window.alert(err.response?.data?.error ?? 'Could not flag this question.');
+    }
+  };
+
   const resolved = query?.status === 'resolved';
+  // Only Expert-badge holders may escalate a question to the admins.
+  const canFlagAttention = Boolean(user?.badges?.includes('expert'));
 
   if (loading) return <div className="container">Loading…</div>;
   if (error) return <div className="container"><p className="muted">{error}</p></div>;
@@ -125,6 +138,11 @@ export default function QueryDetail() {
               Report
             </button>
           )}
+          {canFlagAttention && !query.needs_attention && (
+            <button className="btn-link" onClick={onFlagAttention} title="Escalate to admins">
+              <span className="material-symbols-outlined">priority_high</span> Needs admin attention
+            </button>
+          )}
           {isAdmin && resolved && (
             <button className="btn-link" onClick={onPromote}>
               Promote to FAQ
@@ -135,6 +153,7 @@ export default function QueryDetail() {
 
       <div className="query-meta">
         <span className={`badge status-${query.status}`}>{query.status}</span>
+        {query.needs_attention && <span className="badge flag">needs admin attention</span>}
         <span className="cat">{query.category}</span>
         {query.tags?.map((t) => (
           <span key={t} className="chip">
@@ -281,6 +300,16 @@ function AnswerCard({ answer, canAccept, isAdmin, isOwner, canVote, canComment, 
     }
   };
 
+  const onToggleHelpful = async () => {
+    setBusy(true);
+    try {
+      await markHelpful(answer.id);
+      await onChange();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onReport = async () => {
     const reason = window.prompt('Why are you reporting this answer?');
     if (reason === null) return;
@@ -322,6 +351,7 @@ function AnswerCard({ answer, canAccept, isAdmin, isOwner, canVote, canComment, 
       </div>
       <div className="answer-main">
         {answer.is_accepted && <span className="badge accepted-badge">✓ Solution</span>}
+        {answer.is_helpful && <span className="badge helpful-badge">User found helpful</span>}
         <div className="answer-body">
           <Markdown>{answer.body}</Markdown>
         </div>
@@ -332,6 +362,11 @@ function AnswerCard({ answer, canAccept, isAdmin, isOwner, canVote, canComment, 
           {canAccept && !answer.is_accepted && (
             <button className="btn-link" onClick={onAccept} disabled={busy}>
               {acceptLabel}
+            </button>
+          )}
+          {isOwner && (
+            <button className="btn-link" onClick={onToggleHelpful} disabled={busy}>
+              {answer.is_helpful ? 'Remove helpful' : 'Mark as helpful'}
             </button>
           )}
           {canDelete && (

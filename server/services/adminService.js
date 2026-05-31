@@ -259,6 +259,56 @@ export async function queriesByCategory() {
   return [...map.values()].sort((a, b) => b.total - a.total);
 }
 
+/**
+ * Questions an Expert has flagged as needing admin attention, sorted **by
+ * category**, then by question posting date, then by the author's joining date
+ * — the order the admin works the list in.
+ */
+export async function listAttentionQueries() {
+  const queries = await Query.find({ needs_attention: true, is_deleted: false })
+    .populate('author_id', 'name createdAt')
+    .populate('attention_flagged_by', 'name')
+    .lean();
+
+  queries.sort(
+    (a, b) =>
+      (a.category || '').localeCompare(b.category || '') ||
+      new Date(a.createdAt) - new Date(b.createdAt) ||
+      new Date(a.author_id?.createdAt ?? 0) - new Date(b.author_id?.createdAt ?? 0),
+  );
+
+  return queries.map((q) => ({
+    id: q._id,
+    title: q.title,
+    category: q.category || 'general',
+    status: q.status,
+    posted_at: q.createdAt,
+    flagged_at: q.attention_flagged_at,
+    flagged_by: q.attention_flagged_by ? { id: q.attention_flagged_by._id, name: q.attention_flagged_by.name } : null,
+    author: q.author_id
+      ? { id: q.author_id._id, name: q.author_id.name, joined_at: q.author_id.createdAt }
+      : null,
+  }));
+}
+
+/** Clear the admin-attention flag on a question once it has been handled. */
+export async function clearAttention(admin, id) {
+  const query = await Query.findOne({ _id: id, is_deleted: false });
+  if (!query) throw ApiError.notFound('Query not found');
+  query.needs_attention = false;
+  query.attention_flagged_by = null;
+  query.attention_flagged_at = null;
+  await query.save();
+  await AuditLog.create({
+    action: 'query.attention_cleared',
+    entity_type: 'query',
+    entity_id: query._id,
+    performed_by: admin._id,
+    details: {},
+  });
+  return { ok: true };
+}
+
 /** Paginated audit log (most recent first). */
 export async function listAudit(opts = {}) {
   const { limit, page, skip } = paginate(opts);

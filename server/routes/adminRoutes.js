@@ -23,9 +23,11 @@ router.get('/moderation', ctrl.listModeration);
 router.post('/moderation/:id/resolve', ctrl.resolveModeration);
 router.post('/moderation/:id/dismiss', ctrl.dismissModeration);
 
-// Query amalgamation / merge + topic grouping.
+// Query amalgamation / merge + topic grouping + attention queue.
 router.get('/queries/clusters', ctrl.queryClusters);
 router.get('/queries/by-category', ctrl.queriesByCategory);
+router.get('/queries/attention', ctrl.attentionQueue);
+router.post('/queries/:id/clear-attention', ctrl.clearAttention);
 router.post('/queries/merge', ctrl.mergeQueries);
 
 // Audit log.

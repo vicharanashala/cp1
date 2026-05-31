@@ -141,7 +141,8 @@ describe('solution engine', () => {
     const author = await User.findById(answerer.user.id);
     const askerDoc = await User.findById(asker.user.id);
     expect(author.points).toBe(POINTS.ANSWER_ACCEPTED);
-    expect(askerDoc.points).toBe(POINTS.QUERY_RESOLVED);
+    // Asking a question never earns points — only the answerer is rewarded.
+    expect(askerDoc.points).toBe(0);
   });
 
   test('Path B: no selection → finalize auto-keeps most liked with no points', async () => {

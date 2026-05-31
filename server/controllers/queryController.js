@@ -46,6 +46,11 @@ export const save = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+export const flagAttention = asyncHandler(async (req, res) => {
+  const result = await queryService.flagForAttention(req.user, req.params.id);
+  res.json(result);
+});
+
 export const bookmarks = asyncHandler(async (req, res) => {
   const result = await queryService.listBookmarks(req.user);
   res.json(result);

@@ -14,6 +14,7 @@ import {
   MODERATION_TYPE,
   QUERY_STATUS,
   ROLES,
+  ATTENTION_FLAG_BADGE_KEY,
 } from '../config/constants.js';
 
 const round = (x) => Math.round(x * 1000) / 1000;
@@ -339,6 +340,29 @@ export async function updateQuery(user, id, payload) {
   await doc.save();
   await doc.populate('author_id', 'name');
   return serialize(doc, user._id);
+}
+
+/**
+ * Flag a question for admin attention. Restricted to members who hold the
+ * Expert badge (and admins). Records who flagged it and when, so the admin
+ * attention queue can surface and sort it.
+ */
+export async function flagForAttention(user, id) {
+  const isExpert = (user.badges ?? []).includes(ATTENTION_FLAG_BADGE_KEY);
+  if (!isExpert && user.role !== ROLES.ADMIN) {
+    throw ApiError.forbidden('Only Expert-level members can flag a question for admin attention');
+  }
+
+  const query = await Query.findOne({ _id: id, is_deleted: false });
+  if (!query) throw ApiError.notFound('Query not found');
+
+  if (!query.needs_attention) {
+    query.needs_attention = true;
+    query.attention_flagged_by = user._id;
+    query.attention_flagged_at = new Date();
+    await query.save();
+  }
+  return { ok: true, needs_attention: true };
 }
 
 /** Soft-delete a query (author or admin). */

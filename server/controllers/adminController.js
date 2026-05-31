@@ -46,6 +46,14 @@ export const queriesByCategory = asyncHandler(async (_req, res) => {
   res.json({ categories: await adminService.queriesByCategory() });
 });
 
+export const attentionQueue = asyncHandler(async (_req, res) => {
+  res.json({ items: await adminService.listAttentionQueries() });
+});
+
+export const clearAttention = asyncHandler(async (req, res) => {
+  res.json(await adminService.clearAttention(req.user, req.params.id));
+});
+
 export const metrics = asyncHandler(async (_req, res) => {
   res.json(await adminService.getMetrics());
 });

@@ -269,6 +269,41 @@ async function reconcileQueryStatus(queryId) {
   await query.save();
 }
 
+/**
+ * Toggle the "user found helpful" endorsement on an answer. Only the question's
+ * author (or an admin) can mark it; it's separate from the single accepted
+ * solution and stays attached to the thread. Notifies the answerer when set.
+ */
+export async function toggleHelpful(user, answerId) {
+  const answer = await Answer.findOne({ _id: answerId, is_deleted: false });
+  if (!answer) throw ApiError.notFound('Answer not found');
+
+  const query = await Query.findOne({ _id: answer.query_id, is_deleted: false });
+  if (!query) throw ApiError.notFound('Query not found');
+
+  const isAuthor = String(query.author_id) === String(user._id);
+  if (!isAuthor && user.role !== ROLES.ADMIN) {
+    throw ApiError.forbidden('Only the question author can mark an answer as helpful');
+  }
+
+  answer.is_helpful = !answer.is_helpful;
+  answer.helpful_at = answer.is_helpful ? new Date() : null;
+  await answer.save();
+
+  if (answer.is_helpful && String(answer.author_id) !== String(user._id)) {
+    await notify({
+      recipientId: answer.author_id,
+      type: NOTIFICATION_TYPE.LIKE,
+      title: 'The asker found your answer helpful',
+      link: `/queries/${answer.query_id}`,
+      queryId: answer.query_id,
+      answerId: answer._id,
+    });
+  }
+
+  return { ok: true, is_helpful: answer.is_helpful };
+}
+
 /** Soft-delete an answer (author or admin), then reconcile the query's status. */
 export async function deleteAnswer(user, answerId) {
   const answer = await Answer.findOne({ _id: answerId, is_deleted: false });

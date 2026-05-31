@@ -9,6 +9,7 @@ const router = Router();
 
 router.post('/:id/like', auth, banCheck, writeLimiter, ctrl.like);
 router.post('/:id/vote', auth, banCheck, writeLimiter, ctrl.vote);
+router.post('/:id/helpful', auth, banCheck, ctrl.helpful);
 router.post('/:id/comments', auth, banCheck, writeLimiter, ctrl.comment);
 router.delete('/comments/:commentId', auth, ctrl.deleteComment);
 router.post('/:id/report', auth, banCheck, writeLimiter, ctrl.reportAnswer);

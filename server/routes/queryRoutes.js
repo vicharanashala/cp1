@@ -31,6 +31,9 @@ router.delete('/:id', auth, ctrl.remove);
 router.post('/:id/vote', auth, banCheck, writeLimiter, ctrl.vote);
 router.post('/:id/save', auth, ctrl.save);
 
+// Escalation: an Expert-level member flags a question for admin attention.
+router.post('/:id/attention', auth, banCheck, ctrl.flagAttention);
+
 // Answers + solution engine (Milestone 3), nested under the query.
 router.get('/:queryId/answers', optionalAuth, answerCtrl.list);
 router.post('/:queryId/answers', auth, banCheck, writeLimiter, answerCtrl.post);

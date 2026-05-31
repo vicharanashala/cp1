@@ -55,6 +55,16 @@ export async function getQueriesByCategory() {
   return data.categories;
 }
 
+export async function getAttentionQueue() {
+  const { data } = await api.get('/admin/queries/attention');
+  return data.items;
+}
+
+export async function clearAttention(id) {
+  const { data } = await api.post(`/admin/queries/${id}/clear-attention`);
+  return data;
+}
+
 export async function mergeQueries(payload) {
   const { data } = await api.post('/admin/queries/merge', payload);
   return data;

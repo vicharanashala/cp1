@@ -37,6 +37,11 @@ export const remove = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+export const helpful = asyncHandler(async (req, res) => {
+  const result = await answerService.toggleHelpful(req.user, req.params.id);
+  res.json(result);
+});
+
 export const reportAnswer = asyncHandler(async (req, res) => {
   const result = await answerService.reportContent(req.user, {
     targetType: 'answer',

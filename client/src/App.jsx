@@ -19,6 +19,7 @@ import Support from './pages/Support.jsx';
 import Saved from './pages/Saved.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import AdminOverview from './pages/admin/AdminOverview.jsx';
+import AdminAttention from './pages/admin/AdminAttention.jsx';
 import AdminModeration from './pages/admin/AdminModeration.jsx';
 import AdminFaqManager from './pages/admin/AdminFaqManager.jsx';
 import AdminUsers from './pages/admin/AdminUsers.jsx';
@@ -86,6 +87,7 @@ export default function App() {
             }
           >
             <Route index element={<AdminOverview />} />
+            <Route path="attention" element={<AdminAttention />} />
             <Route path="moderation" element={<AdminModeration />} />
             <Route path="faq" element={<AdminFaqManager />} />
             <Route path="users" element={<AdminUsers />} />

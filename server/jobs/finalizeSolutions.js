@@ -78,10 +78,10 @@ export async function finalizeSolutions({ force = false } = {}) {
     query.status = QUERY_STATUS.RESOLVED;
     await query.save();
 
-    // Points only on Path A — Path B is an automatic keep, no reward.
+    // Points only on Path A — Path B is an automatic keep, no reward. Only the
+    // answerer is rewarded; asking a question never earns points.
     if (pathA) {
       await awardPoints(accepted.author_id, POINTS.ANSWER_ACCEPTED);
-      await awardPoints(query.author_id, POINTS.QUERY_RESOLVED);
     }
 
     await notify({

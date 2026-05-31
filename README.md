@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🅒 CURIO
+# CURIO
 
 ### A knowledge base that improves itself.
 
@@ -54,7 +54,9 @@ A query moves through a clear lifecycle, with quality gates at the front door so
 **2. The forum & resolution** — once posted, a query is **Open**:
 - Any logged-in member can post an **answer** (Markdown supported). The first answer flips the status to **Answered**.
 - Questions and answers both support **up/down voting**; answers can have **threaded comments**; members can **bookmark** questions and **report** bad content.
-- The **Solution Marking Engine** lets the question's author — *or an admin* — accept an answer as the solution. This starts a short grace period, after which the thread is finalized as **Resolved** and reputation is awarded.
+- The **Solution Marking Engine** lets the question's author — *or an admin* — accept an answer as the solution. This starts a short grace period, after which the thread is finalized as **Resolved** and the answerer is rewarded.
+- The asker can also mark any answer **"User found helpful"** — a lighter endorsement, separate from the single accepted solution, that stays attached to the thread.
+- **Escalation:** a member holding the **Expert** badge can flag a question as **"Needs admin attention,"** routing it to the admin attention queue.
 - Resolved, high-value threads can be **promoted into the FAQ**, turning a one-off answer into permanent, searchable knowledge.
 
 **3. Status lifecycle:** `Open → Answered → Resolved → (Archived)`. Unused resolved threads are LRU-archived over time and quietly un-archived the moment someone opens them again. If an answer is later deleted (including by an admin), the thread's status is **automatically reconciled** — a question never shows as "resolved" once it has no answers left, and a deleted accepted answer clears the solution.
@@ -71,9 +73,8 @@ Reputation is earned, not given — and it drives the badge system.
 |---|---|
 | Your answer is **accepted** as the solution | **+15** |
 | Your answer is **upvoted** | **+2** each |
-| Your question is **resolved** | **+5** |
 
-> Downvotes never deduct an author's points (no griefing), and you can't vote on or accept your own content.
+> Points reward **answering**, not asking — posting or resolving your own question earns nothing. Downvotes never deduct an author's points (no griefing), and you can't vote on or accept your own content.
 
 **Reputation badges** unlock automatically as points accumulate:
 
@@ -100,6 +101,7 @@ Admins get a dedicated dashboard and inline controls across the app — moderati
 - **System overview** — live KPIs (users, open questions, resolution rate, moderation load, AI status).
 - **Needs Attention** — actionable cards (flagged content, pending approvals, open questions) that deep-link straight to the work.
 - **Queries by Category** — central grouping of all technical queries by topic with open / answered / resolved counts and deep links.
+- **Attention queue** — questions escalated by Expert members, grouped by category and ordered by posting date then the asker's joining date; clear each once handled.
 - **Audit log** — every privileged action is recorded and reviewable.
 
 **Content & community control**
