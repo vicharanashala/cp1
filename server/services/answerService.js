@@ -78,7 +78,7 @@ export async function postAnswer(user, queryId, body) {
 /** List a query's answers (accepted first, then by likes), with the viewer's like state. */
 export async function listAnswers(queryId, viewerId) {
   const answers = await Answer.find({ query_id: queryId, is_deleted: false })
-    .sort({ is_accepted: -1, like_count: -1, createdAt: 1 })
+    .sort({ is_helpful: -1, is_accepted: -1, like_count: -1, createdAt: 1 })
     .populate('author_id', 'name points')
     .lean();
 
@@ -130,6 +130,15 @@ export async function addComment(user, answerId, body) {
   const answer = await Answer.findOne({ _id: answerId, is_deleted: false });
   if (!answer) throw ApiError.notFound('Answer not found');
 
+  // The discussion under an answer is between the question poster and the answer
+  // author only — no third-party (user↔user) chatter.
+  const parent = await Query.findOne({ _id: answer.query_id, is_deleted: false });
+  const isPoster = parent && String(parent.author_id) === String(user._id);
+  const isAnswerAuthor = String(answer.author_id) === String(user._id);
+  if (!isPoster && !isAnswerAuthor && user.role !== ROLES.ADMIN) {
+    throw ApiError.forbidden('Only the question author and the answer author can comment here');
+  }
+
   const comment = await Comment.create({
     answer_id: answer._id,
     author_id: user._id,
@@ -178,6 +187,12 @@ export async function setAnswerVote(user, answerId, desired) {
   if (!answer) throw ApiError.notFound('Answer not found');
   if (String(answer.author_id) === String(user._id)) {
     throw ApiError.badRequest('You cannot vote on your own answer');
+  }
+  // Forum interaction is between a user and the question poster only — no peer
+  // voting. Only the question's author (or an admin) may rate answers.
+  const parent = await Query.findOne({ _id: answer.query_id, is_deleted: false });
+  if (!parent || (String(parent.author_id) !== String(user._id) && user.role !== ROLES.ADMIN)) {
+    throw ApiError.forbidden('Only the question author can rate answers');
   }
 
   const existing = await Like.findOne({ answer_id: answer._id, user_id: user._id });
@@ -270,9 +285,10 @@ async function reconcileQueryStatus(queryId) {
 }
 
 /**
- * Toggle the "user found helpful" endorsement on an answer. Only the question's
- * author (or an admin) can mark it; it's separate from the single accepted
- * solution and stays attached to the thread. Notifies the answerer when set.
+ * Mark (or unmark) an answer as the "user found helpful" solution. Only the
+ * question author (or an admin) can do it. Marking it **closes the question for
+ * answers** (resolved), records it as the accepted solution, and rewards the
+ * answerer; un-marking reopens the thread and reverses the reward.
  */
 export async function toggleHelpful(user, answerId) {
   const answer = await Answer.findOne({ _id: answerId, is_deleted: false });
@@ -286,22 +302,39 @@ export async function toggleHelpful(user, answerId) {
     throw ApiError.forbidden('Only the question author can mark an answer as helpful');
   }
 
-  answer.is_helpful = !answer.is_helpful;
-  answer.helpful_at = answer.is_helpful ? new Date() : null;
+  const nowHelpful = !answer.is_helpful;
+  answer.is_helpful = nowHelpful;
+  answer.helpful_at = nowHelpful ? new Date() : null;
   await answer.save();
 
-  if (answer.is_helpful && String(answer.author_id) !== String(user._id)) {
-    await notify({
-      recipientId: answer.author_id,
-      type: NOTIFICATION_TYPE.LIKE,
-      title: 'The asker found your answer helpful',
-      link: `/queries/${answer.query_id}`,
-      queryId: answer.query_id,
-      answerId: answer._id,
-    });
+  if (nowHelpful) {
+    // Endorsing an answer closes the question and records the solution.
+    query.accepted_answer_id = answer._id;
+    query.status = QUERY_STATUS.RESOLVED;
+    if (!query.first_answered_at) query.first_answered_at = new Date();
+    await query.save();
+    await awardPoints(answer.author_id, POINTS.ANSWER_ACCEPTED);
+    if (String(answer.author_id) !== String(user._id)) {
+      await notify({
+        recipientId: answer.author_id,
+        type: NOTIFICATION_TYPE.ACCEPT,
+        title: 'Your answer was marked helpful and closed the question',
+        message: query.title,
+        link: `/queries/${answer.query_id}`,
+        queryId: answer.query_id,
+        answerId: answer._id,
+      });
+    }
+  } else if (String(query.accepted_answer_id) === String(answer._id)) {
+    // Un-marking the solution reopens the thread for answers.
+    query.accepted_answer_id = null;
+    query.grace_period_deadline = null;
+    query.status = QUERY_STATUS.ANSWERED;
+    await query.save();
+    await awardPoints(answer.author_id, -POINTS.ANSWER_ACCEPTED);
   }
 
-  return { ok: true, is_helpful: answer.is_helpful };
+  return { ok: true, is_helpful: nowHelpful, status: query.status };
 }
 
 /** Soft-delete an answer (author or admin), then reconcile the query's status. */

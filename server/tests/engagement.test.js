@@ -109,35 +109,31 @@ describe('bookmarks', () => {
   });
 });
 
-describe('answer voting', () => {
-  test('downvotes lower the score but not like_count or the author reputation', async () => {
+describe('answer voting (question author only)', () => {
+  test('only the asker rates answers; a downvote never docks reputation', async () => {
     const asker = await makeUser('Asker');
     const answerer = await makeUser('Answerer');
-    const u1 = await makeUser('Voter1');
-    const u2 = await makeUser('Voter2');
+    const outsider = await makeUser('Outsider');
     const query = await createQuery(asker.token);
     const answer = await postAnswer(answerer.token, query.id);
 
-    // Upvote awards the author points (like the legacy /like).
-    const up = await authed(request(app).post(`/api/answers/${answer.id}/vote`), u1.token).send({ value: 1 });
+    // A third-party user (not the poster) cannot rate the answer — no peer voting.
+    const denied = await authed(request(app).post(`/api/answers/${answer.id}/vote`), outsider.token).send({ value: 1 });
+    expect(denied.status).toBe(403);
+
+    // The asker upvotes → the author gains points.
+    const up = await authed(request(app).post(`/api/answers/${answer.id}/vote`), asker.token).send({ value: 1 });
     expect(up.body).toMatchObject({ value: 1, like_count: 1, score: 1 });
     let author = await User.findById(answerer.user.id);
     expect(author.points).toBe(POINTS.ANSWER_LIKED);
 
-    // u1 switches to a downvote: upvote removed (points back to 0, like_count 0),
-    // downvote recorded (score -1).
-    const switched = await authed(request(app).post(`/api/answers/${answer.id}/vote`), u1.token).send({ value: -1 });
+    // The asker switches to a downvote: upvote removed (points back to 0), score -1.
+    const switched = await authed(request(app).post(`/api/answers/${answer.id}/vote`), asker.token).send({ value: -1 });
     expect(switched.body).toMatchObject({ value: -1, like_count: 0, score: -1 });
     author = await User.findById(answerer.user.id);
     expect(author.points).toBe(0);
 
-    // A second downvote from u2 lowers the score further, still no reputation hit.
-    const down2 = await authed(request(app).post(`/api/answers/${answer.id}/vote`), u2.token).send({ value: -1 });
-    expect(down2.body).toMatchObject({ value: -1, like_count: 0, score: -2 });
-    author = await User.findById(answerer.user.id);
-    expect(author.points).toBe(0);
-
-    // The author cannot vote on their own answer.
+    // The answer author cannot vote on their own answer.
     const self = await authed(request(app).post(`/api/answers/${answer.id}/vote`), answerer.token).send({ value: 1 });
     expect(self.status).toBe(400);
   });

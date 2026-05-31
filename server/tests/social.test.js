@@ -50,14 +50,21 @@ async function postAnswer(token, queryId) {
 }
 
 describe('comments on answers', () => {
-  test('add a comment, see it in the thread, and delete it', async () => {
+  test('only the poster or answer author can comment; the poster adds and deletes one', async () => {
     const asker = await makeUser('Asker');
     const answerer = await makeUser('Answerer');
-    const commenter = await makeUser('Commenter');
+    const outsider = await makeUser('Outsider');
     const query = await createQuery(asker.token);
     const answer = await postAnswer(answerer.token, query.id);
 
-    const added = await authed(request(app).post(`/api/answers/${answer.id}/comments`), commenter.token).send({
+    // A third-party user cannot comment — discussion is poster ↔ answerer only.
+    const blocked = await authed(request(app).post(`/api/answers/${answer.id}/comments`), outsider.token).send({
+      body: 'Butting in from the side.',
+    });
+    expect(blocked.status).toBe(403);
+
+    // The question poster can comment on the answer.
+    const added = await authed(request(app).post(`/api/answers/${answer.id}/comments`), asker.token).send({
       body: 'Have you tried raising the pool size?',
     });
     expect(added.status).toBe(201);
@@ -68,7 +75,7 @@ describe('comments on answers', () => {
 
     const del = await authed(
       request(app).delete(`/api/answers/comments/${added.body.comment.id}`),
-      commenter.token,
+      asker.token,
     ).send();
     expect(del.status).toBe(200);
 

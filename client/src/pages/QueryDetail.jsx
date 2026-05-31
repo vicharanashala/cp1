@@ -4,9 +4,7 @@ import { getQuery, deleteQuery, voteQuery, saveQuery, flagAttention } from '../a
 import {
   listAnswers,
   postAnswer,
-  voteAnswer,
   deleteAnswer,
-  markSolution,
   markHelpful,
   reportQuery,
   reportAnswer,
@@ -241,7 +239,7 @@ export default function QueryDetail() {
         {answers.length > 1 && (
           <div className="sort-toggle">
             <button className={sort === 'top' ? 'on' : ''} onClick={() => setSort('top')}>
-              Highest voted
+              Top
             </button>
             <button className={sort === 'new' ? 'on' : ''} onClick={() => setSort('new')}>
               Newest
@@ -255,50 +253,26 @@ export default function QueryDetail() {
           <AnswerCard
             key={a.id}
             answer={a}
-            canAccept={(query.is_owner || isAdmin) && !resolved}
+            canManage={query.is_owner || isAdmin}
             isAdmin={isAdmin}
-            isOwner={query.is_owner}
-            canVote={Boolean(user) && !a.is_owner}
-            canComment={Boolean(user)}
+            canComment={query.is_owner || a.is_owner || isAdmin}
             onChange={loadAll}
-            queryId={id}
           />
         ))}
         {answers.length === 0 && <p className="muted">No answers yet.</p>}
       </div>
 
       {user && !resolved && <AnswerForm queryId={id} onPosted={loadAll} />}
-      {resolved && <p className="muted">This question is resolved and no longer accepts answers.</p>}
+      {resolved && (
+        <p className="muted">This question is closed — an answer was marked helpful, so it no longer accepts answers.</p>
+      )}
     </div>
   );
 }
 
-function AnswerCard({ answer, canAccept, isAdmin, isOwner, canVote, canComment, onChange, queryId }) {
+function AnswerCard({ answer, canManage, isAdmin, canComment, onChange }) {
   const [busy, setBusy] = useState(false);
-  // Admin approving someone else's answer reads as "approve"; the author's own
-  // acceptance keeps the familiar "mark as solution" wording.
-  const acceptLabel = isAdmin && !isOwner ? 'Approve as solution' : 'Mark as solution';
   const canDelete = answer.is_owner || isAdmin;
-
-  const onVote = async (value) => {
-    setBusy(true);
-    try {
-      await voteAnswer(answer.id, value);
-      await onChange();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onAccept = async () => {
-    setBusy(true);
-    try {
-      await markSolution(queryId, answer.id);
-      await onChange();
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const onToggleHelpful = async () => {
     setBusy(true);
@@ -324,34 +298,13 @@ function AnswerCard({ answer, canAccept, isAdmin, isOwner, canVote, canComment, 
   };
 
   return (
-    <article className={`answer-card ${answer.is_accepted ? 'accepted' : ''}`}>
-      <div className="answer-rail">
-        <button
-          className={`vote-btn ${answer.my_vote === 1 ? 'on-up' : ''}`}
-          onClick={() => onVote(1)}
-          disabled={!canVote || busy}
-          title={canVote ? 'Upvote' : 'You cannot vote on this answer'}
-        >
-          <span className="material-symbols-outlined">thumb_up</span>
-        </button>
-        <span className="vote-score">{answer.score ?? answer.like_count ?? 0}</span>
-        <button
-          className={`vote-btn ${answer.my_vote === -1 ? 'on-down' : ''}`}
-          onClick={() => onVote(-1)}
-          disabled={!canVote || busy}
-          title={canVote ? 'Downvote' : 'You cannot vote on this answer'}
-        >
-          <span className="material-symbols-outlined">thumb_down</span>
-        </button>
-        {answer.is_accepted && (
-          <span className="accepted-mark material-symbols-outlined" title="Accepted answer">
-            check_circle
-          </span>
-        )}
-      </div>
+    <article className={`answer-card ${answer.is_helpful || answer.is_accepted ? 'accepted' : ''}`}>
       <div className="answer-main">
-        {answer.is_accepted && <span className="badge accepted-badge">✓ Solution</span>}
-        {answer.is_helpful && <span className="badge helpful-badge">User found helpful</span>}
+        {answer.is_helpful ? (
+          <span className="badge helpful-badge">User found helpful</span>
+        ) : (
+          answer.is_accepted && <span className="badge accepted-badge">✓ Solution</span>
+        )}
         <div className="answer-body">
           <Markdown>{answer.body}</Markdown>
         </div>
@@ -359,14 +312,9 @@ function AnswerCard({ answer, canAccept, isAdmin, isOwner, canVote, canComment, 
           <span className="by">
             <Author author={answer.author} /> · {relativeTime(answer.createdAt)}
           </span>
-          {canAccept && !answer.is_accepted && (
-            <button className="btn-link" onClick={onAccept} disabled={busy}>
-              {acceptLabel}
-            </button>
-          )}
-          {isOwner && (
+          {canManage && (
             <button className="btn-link" onClick={onToggleHelpful} disabled={busy}>
-              {answer.is_helpful ? 'Remove helpful' : 'Mark as helpful'}
+              {answer.is_helpful ? 'Reopen (remove helpful)' : 'Mark as helpful & close'}
             </button>
           )}
           {canDelete && (

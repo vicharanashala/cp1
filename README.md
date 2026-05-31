@@ -31,8 +31,8 @@ Built as an open-source internship project with **zero paid infrastructure**: th
 |---|---|
 | **FAQ + AI Chatbot** | Category-organized FAQ with hybrid keyword + semantic search, fronted by a two-tier RAG chatbot (FAQ → resolved community threads → AI compose). |
 | **Ask a Query** | Structured intake with gibberish detection, opt-in grammar auto-correction, duplicate detection, categories/tags, optional anonymity, screenshots, and contact email. |
-| **Q&A Forum** | Any member can answer; up/down voting on questions **and** answers, threaded comments, bookmarks, reporting, and resolution. |
-| **Solution Marking Engine** | The asker (or an admin) accepts the best answer; resolved, high-value threads are promoted into the canonical FAQ. |
+| **Q&A Forum** | A support-ticket model: any member answers, but only the poster rates/closes answers and discussion stays poster ↔ answerer (no peer voting or cross-talk). Question voting, bookmarks, and reporting included. |
+| **Solution Marking Engine** | The poster (or an admin) marks an answer "helpful" to close the thread; resolved, high-value threads can be promoted into the canonical FAQ. |
 | **Reputation & Badges** | Points, leaderboard, tiered reputation badges, admin-awarded custom badges, and admin-issued moderation flags. |
 | **Admin & Governance** | A telemetry dashboard, moderation queue, duplicate merge, bans/roles, full badge control, FAQ management, and an audit log. |
 | **Automated Maintenance** | Scheduled jobs (LRU archival, staleness checks, orphan cleanup, soft-delete purge, badge recalc, embedding refresh) — each also triggerable from the admin panel. |
@@ -52,10 +52,9 @@ A query moves through a clear lifecycle, with quality gates at the front door so
 - **Context** — category, tags, optional anonymity, screenshots, and a contact email can be attached.
 
 **2. The forum & resolution** — once posted, a query is **Open**:
-- Any logged-in member can post an **answer** (Markdown supported). The first answer flips the status to **Answered**.
-- Questions and answers both support **up/down voting**; answers can have **threaded comments**; members can **bookmark** questions and **report** bad content.
-- The **Solution Marking Engine** lets the question's author — *or an admin* — accept an answer as the solution. This starts a short grace period, after which the thread is finalized as **Resolved** and the answerer is rewarded.
-- The asker can also mark any answer **"User found helpful"** — a lighter endorsement, separate from the single accepted solution, that stays attached to the thread.
+- Any logged-in member can post an **answer** (Markdown supported), flipping the question to **Answered**.
+- **Support-ticket interaction model — no user ↔ user cross-talk.** The forum is a conversation between a member and the **question poster**, not a free-for-all: only the **poster** (or an admin) can rate answers, and discussion under an answer is limited to the **poster and that answer's own author**. Other members can read and answer, but can't vote on or comment on each other's answers. (Questions themselves can still be up/down voted, bookmarked, and reported.)
+- The poster (or an admin) marks the best answer **"User found helpful,"** which **closes the question for answers**, records it as the solution, and rewards the answerer; un-marking reopens the thread.
 - **Escalation:** a member holding the **Expert** badge can flag a question as **"Needs admin attention,"** routing it to the admin attention queue.
 - Resolved, high-value threads can be **promoted into the FAQ**, turning a one-off answer into permanent, searchable knowledge.
 
