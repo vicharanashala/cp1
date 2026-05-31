@@ -22,7 +22,7 @@
 | 7 | Maintenance crons | Scheduled jobs + manual triggers | `[x]` |
 | 8 | Polish & ship | Design, docs, deploy-ready | `[x]` |
 | — | **Phase 2 — Frozen Precision redesign** | _frontend parity + the backend it implies_ | |
-| 9 | Design system & app shell | Light theme tokens + sidebar shell (FE) | `[ ]` |
+| 9 | Design system & app shell | Light theme tokens + sidebar shell (FE) | `[x]` |
 | 10 | Home & FAQ re-skin | Dashboard + FAQ to reference (FE) | `[ ]` |
 | 11 | Forum & thread re-skin | Filters/sort/pagination + Markdown (FE) | `[ ]` |
 | 12 | Admin dashboard re-skin | KPIs + needs-attention + audit feed (FE) | `[ ]` |
@@ -179,12 +179,12 @@ Goal: portfolio-grade, reproducible, demo-ready.
 
 Goal: the light "Frozen Precision" foundation everything else builds on. **Frontend-only.**
 
-- [ ] Add **Inter** + port `DESIGN.md` tokens (color palette, 8px spacing rhythm, radii, type scale) into `styles.css`; switch dark → light theme
-- [ ] Button variants (primary solid / secondary outline / ghost), 1px-hairline cards, input focus glow, chips/tags per spec
-- [ ] **Left-sidebar app shell** (brand "Knowledge Hub" header; nav: Home / FAQ / Ask a Query / Forum / Leaderboard / Profile; footer: Settings / Support) wrapping all routes
-- [ ] Top bar: global search field, notification bell, user avatar (initials)
-- [ ] "+ New Entry" sidebar button → `/ask`; Settings / Support placeholder routes
-- [ ] Preserve existing features under the new shell (chatbot widget, ban banner); responsive (sidebar collapses on mobile)
+- [x] Add **Inter** + port `DESIGN.md` tokens (color palette, 8px spacing rhythm, radii, type scale) into `styles.css`; switch dark → light theme
+- [x] Button variants (primary solid / secondary outline / ghost), 1px-hairline cards, input focus glow, chips/tags per spec
+- [x] **Left-sidebar app shell** (brand "Knowledge Hub" header; nav: Home / FAQ / Ask a Query / Forum / Leaderboard / Profile; footer: Settings / Support) wrapping all routes
+- [x] Top bar: global search field, notification bell, user avatar (initials)
+- [x] "+ New Entry" sidebar button → `/ask`; Settings / Support placeholder routes
+- [x] Preserve existing features under the new shell (chatbot widget, ban banner); responsive (sidebar collapses on mobile)
 
 ## Milestone 10 — Home dashboard & FAQ re-skin
 

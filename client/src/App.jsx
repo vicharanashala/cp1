@@ -1,6 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar.jsx';
-import BanBanner from './components/BanBanner.jsx';
+import AppShell from './components/AppShell.jsx';
 import Chatbot from './components/Chatbot.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Home from './pages/Home.jsx';
@@ -14,6 +13,8 @@ import EditQuery from './pages/EditQuery.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 import Profile from './pages/Profile.jsx';
 import Faq from './pages/Faq.jsx';
+import Settings from './pages/Settings.jsx';
+import Support from './pages/Support.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import AdminOverview from './pages/admin/AdminOverview.jsx';
 import AdminModeration from './pages/admin/AdminModeration.jsx';
@@ -25,9 +26,7 @@ import AdminMaintenance from './pages/admin/AdminMaintenance.jsx';
 export default function App() {
   return (
     <>
-      <Navbar />
-      <BanBanner />
-      <main>
+      <AppShell>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -36,6 +35,8 @@ export default function App() {
           <Route path="/queries/:id" element={<QueryDetail />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/faq" element={<Faq />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/support" element={<Support />} />
           <Route path="/users/:id" element={<Profile />} />
           <Route
             path="/ask"
@@ -70,7 +71,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </main>
+      </AppShell>
       <Chatbot />
     </>
   );
