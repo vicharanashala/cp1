@@ -1,9 +1,11 @@
 import { User } from '../models/User.js';
 import { Query } from '../models/Query.js';
 import { Answer } from '../models/Answer.js';
+import { Bookmark } from '../models/Bookmark.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { ApiError } from '../utils/ApiError.js';
 import { notify } from './notificationService.js';
+import { standing } from './badgeService.js';
 import { POSITIVE_BADGES, NEGATIVE_BADGES, NOTIFICATION_TYPE } from '../config/constants.js';
 
 /** Public profile: reputation, badges, governance status, and activity counts. */
@@ -28,6 +30,7 @@ export async function getProfile(userId) {
     name: user.name,
     points: user.points,
     badges,
+    standing: standing(user.points),
     negative_badges: user.negative_badges ?? [],
     is_banned: user.is_banned,
     ban_expires_at: user.ban_expires_at,
@@ -37,6 +40,47 @@ export async function getProfile(userId) {
     answer_count: answerCount,
     member_since: user.createdAt,
   };
+}
+
+/** Update the current user's own profile (name) + notification preferences. */
+export async function updateMe(user, payload = {}) {
+  const updates = {};
+  if (typeof payload.name === 'string' && payload.name.trim()) {
+    updates.name = payload.name.trim().slice(0, 80);
+  }
+  if (payload.notification_prefs && typeof payload.notification_prefs === 'object') {
+    const p = payload.notification_prefs;
+    updates.notification_prefs = {
+      answers: Boolean(p.answers),
+      mentions: Boolean(p.mentions),
+      system: Boolean(p.system),
+    };
+  }
+  if (Object.keys(updates).length === 0) throw ApiError.badRequest('Nothing to update');
+  const updated = await User.findByIdAndUpdate(user._id, updates, { new: true });
+  return updated.toJSON();
+}
+
+/** A unified recent-activity feed for the current user (asked / answered / saved). */
+export async function getActivity(user, limit = 10) {
+  const n = Math.min(Number(limit) || 10, 30);
+  const [queries, answers, bookmarks] = await Promise.all([
+    Query.find({ author_id: user._id, is_deleted: false }).sort({ createdAt: -1 }).limit(n).select('title createdAt').lean(),
+    Answer.find({ author_id: user._id, is_deleted: false }).sort({ createdAt: -1 }).limit(n).populate('query_id', 'title').lean(),
+    Bookmark.find({ user_id: user._id }).sort({ createdAt: -1 }).limit(n).populate('query_id', 'title').lean(),
+  ]);
+
+  const items = [
+    ...queries.map((q) => ({ type: 'question', label: 'Asked', title: q.title, link: `/queries/${q._id}`, at: q.createdAt })),
+    ...answers
+      .filter((a) => a.query_id)
+      .map((a) => ({ type: 'answer', label: 'Answered', title: a.query_id.title, link: `/queries/${a.query_id._id}`, at: a.createdAt })),
+    ...bookmarks
+      .filter((b) => b.query_id)
+      .map((b) => ({ type: 'saved', label: 'Saved', title: b.query_id.title, link: `/queries/${b.query_id._id}`, at: b.createdAt })),
+  ];
+  items.sort((x, y) => new Date(y.at) - new Date(x.at));
+  return { items: items.slice(0, n) };
 }
 
 /** Admin: ban a user, optionally for a fixed number of hours (else permanent). */

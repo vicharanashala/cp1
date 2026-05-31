@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { reputationStanding, badgeDefs } from '../lib/reputation.js';
+import { getActivity } from '../api/users.js';
+import { relativeTime } from '../lib/time.js';
 
 function timeOfDay(hour) {
   if (hour < 12) return 'Good morning';
@@ -119,6 +122,38 @@ function ReputationPanel({ user }) {
   );
 }
 
+function RecentActivity() {
+  const [items, setItems] = useState(null);
+  useEffect(() => {
+    getActivity(8)
+      .then(setItems)
+      .catch(() => setItems([]));
+  }, []);
+  if (items === null) return null;
+  return (
+    <section className="card activity-card">
+      <div className="card-head">
+        <h2>Recent Activity</h2>
+      </div>
+      {items.length === 0 ? (
+        <p className="muted">No activity yet — ask or answer something to get started.</p>
+      ) : (
+        <ul className="activity-list">
+          {items.map((a, i) => (
+            <li key={i}>
+              <span className={`act-tag act-${a.type}`}>{a.label}</span>
+              <Link to={a.link} className="act-title">
+                {a.title}
+              </Link>
+              <span className="muted small act-when">{relativeTime(a.at)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default function Home() {
   const { user } = useAuth();
   const greeting = timeOfDay(new Date().getHours());
@@ -144,11 +179,14 @@ export default function Home() {
       </header>
 
       <div className={`dash-grid ${user ? 'with-rep' : ''}`}>
-        <section className="action-cards">
-          {ACTIONS.map((a) => (
-            <ActionCard key={a.title} {...a} />
-          ))}
-        </section>
+        <div className="dash-left">
+          <section className="action-cards">
+            {ACTIONS.map((a) => (
+              <ActionCard key={a.title} {...a} />
+            ))}
+          </section>
+          {user && <RecentActivity />}
+        </div>
 
         {user ? (
           <ReputationPanel user={user} />

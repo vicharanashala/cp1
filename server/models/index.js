@@ -11,4 +11,5 @@ export { FaqEntry } from './FaqEntry.js';
 export { Like } from './Like.js';
 export { Vote } from './Vote.js';
 export { Bookmark } from './Bookmark.js';
+export { Comment } from './Comment.js';
 export { ChatbotSession } from './ChatbotSession.js';

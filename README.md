@@ -14,11 +14,13 @@ Built as an internship project — open-source, **zero paid infrastructure**, wi
 |---|---|
 | **General FAQ + AI Chatbot** | Category-organized FAQ with keyword + semantic search, fronted by a two-tier RAG chatbot (FAQ → community Q&A → AI compose). |
 | **Ask a Query** | Structured intake with gibberish detection, opt-in auto-correction, duplicate detection, and context enrichment (email, screenshots). |
-| **Q&A Forum** | Community answering, liking, and resolution, with reputation rewards. |
+| **Q&A Forum** | Community answering, up/down voting (questions & answers), threaded comments, bookmarks, and resolution, with reputation rewards. |
 | **Solution Marking Engine** | Promotes the best community answers and resolved threads into the canonical FAQ. |
 | **Reputation** | Points, leaderboard, tiered positive badges, admin-issued negative badges. |
 | **Moderation & Governance** | Moderation queue, bans, soft-delete + audit log, reporting. |
 | **Automated Maintenance** | Scheduled jobs (LRU eviction, staleness, orphan cleanup, soft-delete purge) — each also triggerable from the admin panel. |
+
+> **UI:** the client follows the **"Frozen Precision"** light design system (Inter, glacial-blue palette, hairline surfaces) in a left-sidebar app shell — a personalized home dashboard (reputation ring, streak, recent activity), Markdown-rendered threads, an admin telemetry overview, plus a personal Settings page. The reference design kit lives in [`FrontendReference/`](./FrontendReference). _(Screenshots TODO — run `npm run dev` to preview.)_
 
 ---
 

@@ -27,6 +27,16 @@ export async function deleteAnswer(answerId) {
   return data;
 }
 
+export async function addComment(answerId, body) {
+  const { data } = await api.post(`/answers/${answerId}/comments`, { body });
+  return data.comment;
+}
+
+export async function deleteComment(commentId) {
+  const { data } = await api.delete(`/answers/comments/${commentId}`);
+  return data;
+}
+
 export async function markSolution(queryId, answerId) {
   const { data } = await api.post(`/queries/${queryId}/solution`, { answerId });
   return data;

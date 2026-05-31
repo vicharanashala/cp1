@@ -4,7 +4,7 @@
 > Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked. Add new items as they surface — never delete, mark done. Reference `PLANNING.md` for the *why*.
 
 **Last updated:** 2026-05-30
-**Current focus:** Phase 2 — "Frozen Precision" frontend redesign + the backend features it implies (Milestones 9–14). MVP (1–8) shipped.
+**Current focus:** Phase 2 (Milestones 9–14) COMPLETE — "Frozen Precision" redesign + engagement/social backend shipped as a stacked PR chain. MVP (1–8) shipped.
 **Build approach:** vertical slice — one complete end-to-end loop before going wide. Phase 2 ships **one milestone per PR**, pushed cleanly, implemented only with the maintainer's go-ahead.
 
 ---
@@ -27,7 +27,7 @@
 | 11 | Forum & thread re-skin | Filters/sort/pagination + Markdown (FE) | `[x]` |
 | 12 | Admin dashboard re-skin | KPIs + needs-attention + audit feed (FE) | `[x]` |
 | 13 | Engagement backend | Votes, bookmarks, answer counts (BE+FE) | `[x]` |
-| 14 | Activity/comments/settings | Feed, replies, settings, avatars (BE+FE) | `[ ]` |
+| 14 | Activity/comments/settings | Feed, replies, settings, avatars (BE+FE) | `[x]` |
 
 ---
 
@@ -231,12 +231,12 @@ Goal: the data the reference cards & threads imply. **Backend + UI wiring.**
 
 Goal: remaining reference features that need backend. **Backend + UI wiring.**
 
-- [ ] **Recent-activity feed** endpoint (aggregate the user's queries/answers/saves) → Home feed
-- [ ] **Reply / comment on answers** — `Comment` model + endpoints (threading) + UI
-- [ ] **Settings page** — `GET`/`PATCH /api/users/me` for `notification_prefs` (+ basic profile)
-- [ ] **Avatars** — avatar field or initials/Gravatar across the UI; show author reputation on answer cards
-- [ ] Formalize **level/tier + pts-to-next** in the profile API (replacing M10's client derivation); add admin **resolution_rate** + AI uptime metric
-- [ ] Tests; lint / test / build green; refresh README screenshots
+- [x] **Recent-activity feed** — `GET /api/users/me/activity` (asked/answered/saved) → Home dashboard feed
+- [x] **Comments on answers** — `Comment` model + `POST /api/answers/:id/comments` + `DELETE /api/answers/comments/:id`, shown inline under each answer
+- [x] **Settings page** — `PATCH /api/users/me` for `notification_prefs` + display name; wired to an editable Settings form (AuthContext refresh)
+- [x] **Avatars + author reputation** — initials avatars across the UI; answer authors now show their reputation _(image-upload avatars deferred — initials only)_
+- [x] Formalize **level/tier + pts-to-next** in the profile API (`standing`, server-side `badgeService.standing`); admin **resolution_rate** metric + `/health` uptime
+- [x] Tests (`social.test.js`, 6 cases → 59 server tests); lint / build green; README features updated _(screenshots TODO — manual)_
 
 ---
 

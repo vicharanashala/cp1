@@ -7,6 +7,27 @@ export function earnedBadgeKeys(points) {
   return POSITIVE_BADGES.filter((b) => points >= b.threshold).map((b) => b.key);
 }
 
+// Tier ladder = the entry tier + the four positive badge tiers.
+const TIERS = [{ key: 'newcomer', label: 'Newcomer', icon: '✨', threshold: 0 }, ...POSITIVE_BADGES];
+
+/** Reputation standing for a points total: current tier, next tier, progress. */
+export function standing(points = 0) {
+  const p = Math.max(0, Number(points) || 0);
+  let idx = 0;
+  for (let i = 0; i < TIERS.length; i++) if (p >= TIERS[i].threshold) idx = i;
+  const tier = TIERS[idx];
+  const next = TIERS[idx + 1] ?? null;
+  if (!next) return { tier, next: null, pts_to_next: 0, progress_pct: 100, is_max: true };
+  const span = next.threshold - tier.threshold;
+  return {
+    tier,
+    next,
+    pts_to_next: next.threshold - p,
+    progress_pct: Math.min(100, Math.round(((p - tier.threshold) / span) * 100)),
+    is_max: false,
+  };
+}
+
 /**
  * Sync a user's positive badges to their current points. Mutates `user.badges`
  * but does NOT save. Returns the badge definitions newly earned (for notifying).

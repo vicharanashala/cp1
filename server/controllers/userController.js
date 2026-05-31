@@ -11,3 +11,13 @@ export const profile = asyncHandler(async (req, res) => {
   const user = await userService.getProfile(req.params.id);
   res.json({ user });
 });
+
+export const updateMe = asyncHandler(async (req, res) => {
+  const user = await userService.updateMe(req.user, req.body);
+  res.json({ user });
+});
+
+export const activity = asyncHandler(async (req, res) => {
+  const result = await userService.getActivity(req.user, req.query.limit);
+  res.json(result);
+});
