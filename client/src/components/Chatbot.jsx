@@ -71,7 +71,7 @@ export default function Chatbot() {
   return (
     <>
       <button className="chat-fab" onClick={() => setOpen((o) => !o)} aria-label="Open chatbot">
-        {open ? '×' : '💬'}
+        <span className="material-symbols-outlined">{open ? 'close' : 'chat'}</span>
       </button>
 
       {open && (

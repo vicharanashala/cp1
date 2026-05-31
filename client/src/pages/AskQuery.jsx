@@ -114,7 +114,7 @@ export default function AskQuery() {
 
         <div className="row">
           <button type="button" className="btn-link" onClick={runGrammarCheck} disabled={checking}>
-            {checking ? 'Checking…' : '✨ Check grammar'}
+            {checking ? 'Checking…' : 'Check grammar'}
           </button>
           {originalBody && <span className="hint">Original text preserved.</span>}
         </div>

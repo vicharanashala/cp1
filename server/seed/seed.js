@@ -3,6 +3,7 @@
 // with zero live AI calls (PLANNING §8). Idempotent: re-running skips existing
 // records. Run with `npm run seed`.
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { connectDB, disconnectDB } from '../config/db.js';
 import { ai } from '../config/ai.js';
@@ -56,37 +57,35 @@ async function seedUsers() {
   return byEmail;
 }
 
-async function seedFaqs() {
-  const seedData = [
-    {
-      category: 'Account',
-      question: 'How do I reset my password?',
-      answer: 'Use the "Forgot password" link on the login page. You will receive an email with a reset link valid for one hour.',
-    },
-    {
-      category: 'Account',
-      question: 'How do I change my email address?',
-      answer: 'Open your profile settings, edit the email field, and confirm the change via the verification email we send.',
-    },
-    {
-      category: 'Getting started',
-      question: 'How do I ask a good question?',
-      answer: 'Give a clear title, describe what you tried, add relevant tags, and attach a screenshot if it helps. The quality gates will warn you about duplicates.',
-    },
-    {
-      category: 'Reputation',
-      question: 'How do I earn points and badges?',
-      answer: 'You earn points when your answers are liked or accepted as solutions. Reaching 50, 150, 500 and 1000 points unlocks the Helper, Contributor, Expert and Legend badges.',
-    },
-  ];
-
-  for (const f of seedData) {
-    const exists = await FaqEntry.findOne({ question: f.question, is_deleted: false });
-    if (exists) continue;
-    const embedding = await ai.embed(`${f.question}\n\n${f.answer}`);
-    await FaqEntry.create({ ...f, source: FAQ_SOURCE.ADMIN, embedding });
-    log(`created FAQ: ${f.question}`);
+// Load the curated FAQ set from the bundled JSON, flattening each section's
+// questions into individual entries keyed by the section title (category).
+function loadFaqEntriesFromJson() {
+  const raw = fs.readFileSync(new URL('./data/samagama_faqs.json', import.meta.url), 'utf8');
+  const data = JSON.parse(raw);
+  const entries = [];
+  for (const section of data.sections ?? []) {
+    const category = String(section.section_title ?? 'General').trim() || 'General';
+    for (const item of section.questions ?? []) {
+      const question = String(item.question ?? '').trim();
+      const answer = String(item.answer ?? '').trim();
+      if (question && answer) entries.push({ category, question, answer });
+    }
   }
+  return entries;
+}
+
+async function seedFaqs() {
+  // Replace any existing FAQ entries with the curated set from the JSON source.
+  const removed = await FaqEntry.deleteMany({});
+  if (removed.deletedCount) log(`removed ${removed.deletedCount} existing FAQ entries`);
+
+  const entries = loadFaqEntriesFromJson();
+  const vectors = await ai.embedBatch(entries.map((e) => `${e.question}\n\n${e.answer}`));
+  const docs = entries.map((e, i) => ({ ...e, source: FAQ_SOURCE.ADMIN, embedding: vectors[i] }));
+  await FaqEntry.insertMany(docs);
+
+  const categories = new Set(entries.map((e) => e.category)).size;
+  log(`imported ${docs.length} FAQ entries across ${categories} categories from JSON`);
 }
 
 // Create a query with its offline embedding + hash, mirroring queryService.

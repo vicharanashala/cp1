@@ -58,7 +58,7 @@ export default function NotificationBell() {
   return (
     <div className="bell-wrap">
       <button className="bell-btn" onClick={togglePanel} aria-label="Notifications">
-        🔔
+        <span className="material-symbols-outlined">notifications</span>
         {count > 0 && <span className="bell-badge">{count > 9 ? '9+' : count}</span>}
       </button>
 

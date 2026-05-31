@@ -104,7 +104,7 @@ export default function AdminOverview() {
             <h3>Needs Attention</h3>
           </div>
           {attention.length === 0 ? (
-            <p className="muted">All clear — nothing needs attention right now. 🎉</p>
+            <p className="muted">All clear — nothing needs attention right now.</p>
           ) : (
             <ul className="attention-list">
               {attention.map((a) => (

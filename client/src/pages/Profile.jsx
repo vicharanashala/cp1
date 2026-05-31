@@ -217,7 +217,7 @@ function AdminControls({ profile, onChange }) {
       <h2>Badges</h2>
       <div className="row">
         <button className="btn-secondary" disabled={busy} onClick={awardBadge}>
-          🏅 Award a custom badge
+          Award a custom badge
         </button>
       </div>
     </section>

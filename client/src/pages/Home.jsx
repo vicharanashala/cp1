@@ -99,7 +99,7 @@ function ReputationPanel({ user }) {
           {tier.icon} {tier.label}
         </strong>
         {!isMax && <span className="muted">{ptsToNext} pts to {next.label}</span>}
-        {isMax && <span className="muted">Top tier reached 🎉</span>}
+        {isMax && <span className="muted">Top tier reached</span>}
       </div>
       <div className="rep-bar">
         <span style={{ width: `${progressPct}%` }} />

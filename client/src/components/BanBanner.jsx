@@ -28,7 +28,7 @@ export default function BanBanner() {
 
   return (
     <div className="ban-banner">
-      🚫 Your account is banned{' '}
+      Your account is banned{' '}
       {expires ? (
         <>
           — lifting in <strong>{formatRemaining(expires - now)}</strong>
