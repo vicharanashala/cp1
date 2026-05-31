@@ -1157,3 +1157,285 @@ select:focus,
     width: min(320px, calc(100vw - 2rem));
   }
 }
+
+/* ─── Milestone 10: Home dashboard + FAQ ──────────────────────────────────── */
+
+/* Generic card primitive (hairline-defined flat surface). */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+/* Dashboard header */
+.dash-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+.dash-head h1 {
+  margin: 0 0 0.25rem;
+}
+.dash-head .lead {
+  margin: 0;
+}
+.streak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--primary-tint);
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.streak-chip .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+/* Dashboard grid: action cards + reputation/sign-up panel */
+.dash-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+.dash-grid.with-rep {
+  grid-template-columns: 1fr 320px;
+  align-items: start;
+}
+.action-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.action-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem;
+  cursor: pointer;
+  color: var(--text);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.action-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+.action-card strong {
+  font-size: 1.05rem;
+}
+.action-icon {
+  font-size: 1.75rem;
+  color: var(--primary);
+  background: var(--primary-tint);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.4rem;
+}
+
+/* Reputation panel */
+.rep-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+.rep-card h2 {
+  align-self: flex-start;
+  margin: 0;
+}
+.rep-ring {
+  display: block;
+}
+.rep-track {
+  fill: none;
+  stroke: var(--bg);
+  stroke-width: 12;
+}
+.rep-progress {
+  fill: none;
+  stroke: var(--secondary);
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+.rep-value {
+  fill: var(--primary);
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.rep-label {
+  fill: var(--muted);
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-anchor: middle;
+}
+.rep-tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+.rep-tier strong {
+  font-size: 1.05rem;
+}
+.rep-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.rep-bar span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+.rep-badges {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+.label-sm {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.badge-icons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.badge-chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.signup-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.signup-card h2 {
+  margin: 0;
+}
+
+/* FAQ */
+.faq-search {
+  align-items: center;
+}
+.faq-search .material-symbols-outlined {
+  color: var(--muted);
+}
+.search-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: -0.75rem 0 1.5rem;
+}
+.search-hint .material-symbols-outlined {
+  font-size: 1rem;
+  color: var(--secondary);
+}
+.faq-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.faq-cat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.faq-cat-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: none;
+  border: none;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.faq-cat-name {
+  flex: 1;
+  text-align: left;
+}
+.faq-cat-head .chev {
+  color: var(--muted);
+}
+.faq-cat.open .faq-cat-head {
+  border-bottom: 1px solid var(--border);
+  color: var(--primary);
+}
+.faq-cat .faq-accordion {
+  margin: 0;
+  padding: 0.75rem 1.25rem 1rem;
+}
+.faq-q-text {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.chip.promoted {
+  background: var(--primary-tint);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.view-all {
+  margin-top: 0.5rem;
+}
+.ticket-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+.ticket-cta strong {
+  font-size: 1.05rem;
+}
+.ticket-cta p {
+  margin: 0.25rem 0 0;
+}
+
+@media (max-width: 860px) {
+  .dash-grid.with-rep {
+    grid-template-columns: 1fr;
+  }
+  .ticket-cta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

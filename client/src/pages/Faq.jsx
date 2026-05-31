@@ -1,19 +1,28 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { listFaqs, searchFaqs } from '../api/faq.js';
+
+const PREVIEW_COUNT = 5; // items shown before "View all" expands a category
 
 export default function Faq() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [term, setTerm] = useState('');
   const [results, setResults] = useState(null);
-  const [open, setOpen] = useState({});
+  const [openItems, setOpenItems] = useState({});
+  const [openCats, setOpenCats] = useState({});
+  const [showAll, setShowAll] = useState({});
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const data = await listFaqs();
-        if (active) setGroups(data);
+        if (active) {
+          setGroups(data);
+          // Open the first category by default (matches the reference).
+          if (data[0]) setOpenCats({ [data[0].category]: true });
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -32,20 +41,28 @@ export default function Faq() {
     setResults(await searchFaqs(term));
   };
 
-  const toggle = (key) => setOpen((o) => ({ ...o, [key]: !o[key] }));
+  const toggleItem = (key) => setOpenItems((o) => ({ ...o, [key]: !o[key] }));
+  const toggleCat = (cat) => setOpenCats((o) => ({ ...o, [cat]: !o[cat] }));
 
   return (
     <div className="container">
-      <h1>FAQ</h1>
-      <p className="lead">Browse common questions, or search across the knowledge base.</p>
+      <h1>Browse FAQs</h1>
+      <p className="lead">
+        Definitive answers for clarity. Browse categories below or search to pinpoint guidance.
+      </p>
 
-      <form className="search-bar" onSubmit={onSearch}>
-        <input placeholder="Search the FAQ…" value={term} onChange={(e) => setTerm(e.target.value)} />
+      <form className="search-bar faq-search" onSubmit={onSearch}>
+        <span className="material-symbols-outlined">search</span>
+        <input
+          placeholder="Search by keyword, concept, or natural-language query…"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+        />
         <button className="btn-primary">Search</button>
         {results !== null && (
           <button
             type="button"
-            className="btn-link"
+            className="btn-ghost"
             onClick={() => {
               setTerm('');
               setResults(null);
@@ -55,6 +72,10 @@ export default function Faq() {
           </button>
         )}
       </form>
+      <p className="search-hint">
+        <span className="material-symbols-outlined">bolt</span>
+        Semantic search is active — try asking full questions like “how do I report data?”
+      </p>
 
       {results !== null ? (
         <section>
@@ -64,7 +85,7 @@ export default function Faq() {
           ) : (
             <div className="faq-accordion">
               {results.map((r) => (
-                <FaqItem key={r.id} entry={r} open={open[r.id]} onToggle={() => toggle(r.id)} />
+                <FaqItem key={r.id} entry={r} open={openItems[r.id]} onToggle={() => toggleItem(r.id)} />
               ))}
             </div>
           )}
@@ -74,22 +95,55 @@ export default function Faq() {
       ) : groups.length === 0 ? (
         <p className="muted">No FAQ entries yet.</p>
       ) : (
-        groups.map((g) => (
-          <section key={g.category}>
-            <h2>{g.category}</h2>
-            <div className="faq-accordion">
-              {g.items.map((item) => (
-                <FaqItem
-                  key={item.id}
-                  entry={item}
-                  open={open[item.id]}
-                  onToggle={() => toggle(item.id)}
-                />
-              ))}
-            </div>
-          </section>
-        ))
+        <div className="faq-categories">
+          {groups.map((g) => {
+            const isOpen = !!openCats[g.category];
+            const all = !!showAll[g.category];
+            const visible = all ? g.items : g.items.slice(0, PREVIEW_COUNT);
+            return (
+              <section key={g.category} className={`faq-cat ${isOpen ? 'open' : ''}`}>
+                <button className="faq-cat-head" onClick={() => toggleCat(g.category)}>
+                  <span className="faq-cat-name">{g.category}</span>
+                  <span className="chip">{g.items.length} Articles</span>
+                  <span className="material-symbols-outlined chev">
+                    {isOpen ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
+                {isOpen && (
+                  <div className="faq-accordion">
+                    {visible.map((item) => (
+                      <FaqItem
+                        key={item.id}
+                        entry={item}
+                        open={openItems[item.id]}
+                        onToggle={() => toggleItem(item.id)}
+                      />
+                    ))}
+                    {g.items.length > PREVIEW_COUNT && (
+                      <button
+                        className="btn-ghost view-all"
+                        onClick={() => setShowAll((s) => ({ ...s, [g.category]: !all }))}
+                      >
+                        {all ? 'Show fewer' : `View all ${g.items.length} articles`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
       )}
+
+      <div className="card ticket-cta">
+        <div>
+          <strong>Still can't find the answer?</strong>
+          <p className="muted">Our community and team can help with deeper questions.</p>
+        </div>
+        <Link to="/ask" className="btn-primary">
+          Open a Ticket
+        </Link>
+      </div>
     </div>
   );
 }
@@ -98,15 +152,13 @@ function FaqItem({ entry, open, onToggle }) {
   return (
     <div className={`faq-item ${open ? 'open' : ''}`}>
       <button className="faq-q" onClick={onToggle}>
-        <span>{entry.question}</span>
+        <span className="faq-q-text">
+          {entry.question}
+          {entry.source === 'qa' && <span className="chip promoted">Promoted from Q&amp;A</span>}
+        </span>
         <span className="chevron">{open ? '−' : '+'}</span>
       </button>
-      {open && (
-        <div className="faq-a">
-          {entry.answer}
-          {entry.source === 'qa' && <span className="faq-source">From the community</span>}
-        </div>
-      )}
+      {open && <div className="faq-a">{entry.answer}</div>}
     </div>
   );
 }

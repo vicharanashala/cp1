@@ -23,7 +23,7 @@
 | 8 | Polish & ship | Design, docs, deploy-ready | `[x]` |
 | — | **Phase 2 — Frozen Precision redesign** | _frontend parity + the backend it implies_ | |
 | 9 | Design system & app shell | Light theme tokens + sidebar shell (FE) | `[x]` |
-| 10 | Home & FAQ re-skin | Dashboard + FAQ to reference (FE) | `[ ]` |
+| 10 | Home & FAQ re-skin | Dashboard + FAQ to reference (FE) | `[x]` |
 | 11 | Forum & thread re-skin | Filters/sort/pagination + Markdown (FE) | `[ ]` |
 | 12 | Admin dashboard re-skin | KPIs + needs-attention + audit feed (FE) | `[ ]` |
 | 13 | Engagement backend | Votes, bookmarks, answer counts (BE+FE) | `[ ]` |
@@ -190,12 +190,12 @@ Goal: the light "Frozen Precision" foundation everything else builds on. **Front
 
 Goal: match the reference Home + FAQ screens. **Frontend-only (existing APIs).**
 
-- [ ] Home: three action cards — Ask the Assistant / Browse the FAQ / Ask the Community
-- [ ] Home: reputation ring (points) + level & "pts to next tier" **derived client-side** from badge thresholds; streak chip in the header
-- [ ] Home: recent-badges strip (from the current user's profile)
-- [ ] FAQ: category accordions with **article counts**; "PROMOTED FROM Q&A" tag (`source === 'qa'`); per-category "view all"; semantic-search indicator
-- [ ] FAQ: "Still can't find it? → **Open a Ticket**" CTA → `/ask`
-- [ ] _Recent Activity feed deferred to M14 (needs backend)_
+- [x] Home: three action cards — Ask the Assistant / Browse the FAQ / Ask the Community
+- [x] Home: reputation ring (points) + level & "pts to next tier" **derived client-side** from badge thresholds; streak chip in the header
+- [x] Home: recent-badges strip (from the current user's profile)
+- [x] FAQ: category accordions with **article counts**; "PROMOTED FROM Q&A" tag (`source === 'qa'`); per-category "view all"; semantic-search indicator
+- [x] FAQ: "Still can't find it? → **Open a Ticket**" CTA → `/ask`
+- [~] _Recent Activity feed deferred to M14 (needs backend)_
 
 ## Milestone 11 — Forum list & question thread re-skin
 

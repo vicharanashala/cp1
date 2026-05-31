@@ -13,6 +13,14 @@ export default function Chatbot() {
   const token = useRef(localStorage.getItem(TOKEN_KEY));
   const scrollRef = useRef(null);
 
+  // Allow other parts of the app (e.g. the Home "Ask the Assistant" card) to
+  // open the assistant by dispatching a window event.
+  useEffect(() => {
+    const openIt = () => setOpen(true);
+    window.addEventListener('open-chatbot', openIt);
+    return () => window.removeEventListener('open-chatbot', openIt);
+  }, []);
+
   // Restore prior conversation when the panel first opens.
   useEffect(() => {
     if (!open || !token.current || messages.length) return;
