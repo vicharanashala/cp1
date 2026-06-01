@@ -198,13 +198,22 @@ export default function QueryList() {
                   <span className="foot-spacer" />
                   <span className="q-author">
                     <span className="avatar-sm">{initials(item.author?.name ?? '?')}</span>
-                    {item.author?.id ? (
-                      <Link to={`/users/${item.author.id}`}>{item.author.name}</Link>
-                    ) : (
-                      item.author?.name ?? 'Unknown'
-                    )}
-                    <span className="dot">·</span>
-                    {relativeTime(item.createdAt)}
+                    <span className="author-id">
+                      <span className="author-name-row">
+                        {item.author?.id ? (
+                          <Link to={`/users/${item.author.id}`}>{item.author.name}</Link>
+                        ) : (
+                          item.author?.name ?? 'Unknown'
+                        )}
+                        <span className="dot">·</span>
+                        {relativeTime(item.createdAt)}
+                      </span>
+                      {item.author?.badge && (
+                        <span className="author-badge" title={item.author.badge.label}>
+                          {item.author.badge.icon} {item.author.badge.label}
+                        </span>
+                      )}
+                    </span>
                   </span>
                 </div>
               </li>

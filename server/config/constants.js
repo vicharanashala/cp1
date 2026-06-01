@@ -54,6 +54,13 @@ export const POSITIVE_BADGES = Object.freeze([
 // The badge key a member must hold to flag a question for admin attention.
 export const ATTENTION_FLAG_BADGE_KEY = 'expert';
 
+// Awarded to a user whenever an admin marks one of their answers "verified".
+export const VERIFIED_ANSWER_BADGE = Object.freeze({
+  key: 'admin-verified',
+  label: 'Admin Verified',
+  icon: '✅',
+});
+
 // Negative badges (admin-issued).
 export const NEGATIVE_BADGES = Object.freeze({
   WARNING: { key: 'warning', label: 'Warning', icon: '⚠️' },

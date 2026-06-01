@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as ctrl from '../controllers/answerController.js';
-import { auth } from '../middleware/auth.js';
+import { auth, admin } from '../middleware/auth.js';
 import { banCheck } from '../middleware/banCheck.js';
 import { writeLimiter } from '../middleware/rateLimit.js';
 
@@ -10,6 +10,7 @@ const router = Router();
 router.post('/:id/like', auth, banCheck, writeLimiter, ctrl.like);
 router.post('/:id/vote', auth, banCheck, writeLimiter, ctrl.vote);
 router.post('/:id/helpful', auth, banCheck, ctrl.helpful);
+router.post('/:id/verify', auth, admin, ctrl.verify);
 router.post('/:id/comments', auth, banCheck, writeLimiter, ctrl.comment);
 router.delete('/comments/:commentId', auth, ctrl.deleteComment);
 router.post('/:id/report', auth, banCheck, writeLimiter, ctrl.reportAnswer);

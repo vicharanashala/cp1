@@ -42,6 +42,11 @@ export const helpful = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+export const verify = asyncHandler(async (req, res) => {
+  const result = await answerService.setVerified(req.user, req.params.id, req.body?.is_verified);
+  res.json(result);
+});
+
 export const reportAnswer = asyncHandler(async (req, res) => {
   const result = await answerService.reportContent(req.user, {
     targetType: 'answer',

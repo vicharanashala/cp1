@@ -2,16 +2,19 @@ import { Answer } from '../models/Answer.js';
 import { Query } from '../models/Query.js';
 import { Like } from '../models/Like.js';
 import { Comment } from '../models/Comment.js';
+import { User } from '../models/User.js';
 import { ModerationQueue } from '../models/ModerationQueue.js';
+import { AuditLog } from '../models/AuditLog.js';
 import { ApiError } from '../utils/ApiError.js';
 import { notify } from './notificationService.js';
-import { awardPoints } from './badgeService.js';
+import { awardPoints, topBadge } from './badgeService.js';
 import {
   POINTS,
   QUERY_STATUS,
   NOTIFICATION_TYPE,
   MODERATION_TYPE,
   ROLES,
+  VERIFIED_ANSWER_BADGE,
 } from '../config/constants.js';
 
 function serializeAnswer(obj, viewerId) {
@@ -24,7 +27,12 @@ function serializeAnswer(obj, viewerId) {
   return {
     ...rest,
     id: plain._id,
-    author: { id: authorId ?? null, name: authorRef?.name ?? null, points: authorRef?.points ?? null },
+    author: {
+      id: authorId ?? null,
+      name: authorRef?.name ?? null,
+      points: authorRef?.points ?? null,
+      badge: topBadge(authorRef?.badges),
+    },
     is_owner: isOwner,
   };
 }
@@ -75,15 +83,15 @@ export async function postAnswer(user, queryId, body) {
     });
   }
 
-  await answer.populate('author_id', 'name points');
+  await answer.populate('author_id', 'name points badges');
   return serializeAnswer(answer, user._id);
 }
 
 /** List a query's answers (accepted first, then by likes), with the viewer's like state. */
 export async function listAnswers(queryId, viewerId) {
   const answers = await Answer.find({ query_id: queryId, is_deleted: false })
-    .sort({ is_helpful: -1, is_accepted: -1, like_count: -1, createdAt: 1 })
-    .populate('author_id', 'name points')
+    .sort({ is_verified: -1, is_helpful: -1, is_accepted: -1, like_count: -1, createdAt: 1 })
+    .populate('author_id', 'name points badges')
     .lean();
 
   if (answers.length === 0) return [];
@@ -345,6 +353,56 @@ export async function toggleHelpful(user, answerId) {
   }
 
   return { ok: true, is_helpful: nowHelpful, status: query.status };
+}
+
+/**
+ * Admin: mark (or unmark) an answer as "Admin Verified". Verifying records the
+ * verifier, notifies the answerer, and grants them the persistent Admin Verified
+ * badge (kept even if the answer is later unverified).
+ */
+export async function setVerified(admin, answerId, value) {
+  if (admin.role !== ROLES.ADMIN) throw ApiError.forbidden('Only an admin can verify answers');
+  const answer = await Answer.findOne({ _id: answerId, is_deleted: false });
+  if (!answer) throw ApiError.notFound('Answer not found');
+
+  const verified = Boolean(value);
+  answer.is_verified = verified;
+  answer.verified_by = verified ? admin._id : null;
+  await answer.save();
+
+  await AuditLog.create({
+    action: verified ? 'answer.verify' : 'answer.unverify',
+    entity_type: 'answer',
+    entity_id: answer._id,
+    performed_by: admin._id,
+    details: {},
+  });
+
+  if (verified) {
+    // Grant the answerer the persistent Admin Verified badge (idempotent).
+    const author = await User.findById(answer.author_id);
+    if (author && !author.is_deleted && !author.custom_badges.some((b) => b.key === VERIFIED_ANSWER_BADGE.key)) {
+      author.custom_badges.push({
+        key: VERIFIED_ANSWER_BADGE.key,
+        label: VERIFIED_ANSWER_BADGE.label,
+        icon: VERIFIED_ANSWER_BADGE.icon,
+        reason: 'An admin verified one of your answers',
+        issued_by: admin._id,
+      });
+      await author.save();
+    }
+    await notify({
+      recipientId: answer.author_id,
+      type: NOTIFICATION_TYPE.BADGE,
+      title: 'Your answer was verified by an admin',
+      message: `${VERIFIED_ANSWER_BADGE.icon} Admin Verified`,
+      link: `/queries/${answer.query_id}`,
+      queryId: answer.query_id,
+      answerId: answer._id,
+    });
+  }
+
+  return { ok: true, is_verified: verified };
 }
 
 /** Soft-delete an answer (author or admin), then reconcile the query's status. */

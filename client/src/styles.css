@@ -1057,6 +1057,38 @@ textarea {
   white-space: nowrap;
 }
 
+/* Author identity: name on one line, held badge underneath. */
+.author-id {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  vertical-align: middle;
+}
+.author-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.author-badge {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1;
+}
+.answer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+.badge.verified-badge {
+  background: #e6f4ea;
+  color: #1e7e34;
+  border: 1px solid #b7dfc1;
+}
+.answer-card.verified {
+  border-left: 3px solid #1e7e34;
+}
+
 /* Tag picker on the ask/edit forms — fixed choices, no free text. */
 .tag-picker {
   border: 1px solid var(--border);

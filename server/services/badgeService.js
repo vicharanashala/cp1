@@ -7,6 +7,18 @@ export function earnedBadgeKeys(points) {
   return POSITIVE_BADGES.filter((b) => points >= b.threshold).map((b) => b.key);
 }
 
+/**
+ * The single highest-tier positive badge a user holds, as a full definition
+ * (or null). Used to show the badge under a user's name in the forum.
+ */
+export function topBadge(badgeKeys = []) {
+  if (!Array.isArray(badgeKeys) || badgeKeys.length === 0) return null;
+  const held = POSITIVE_BADGES.filter((b) => badgeKeys.includes(b.key));
+  if (held.length === 0) return null;
+  const best = held.reduce((a, b) => (b.threshold > a.threshold ? b : a));
+  return { key: best.key, label: best.label, icon: best.icon };
+}
+
 // Tier ladder = the entry tier + the four positive badge tiers.
 const TIERS = [{ key: 'newcomer', label: 'Newcomer', icon: '', threshold: 0 }, ...POSITIVE_BADGES];
 

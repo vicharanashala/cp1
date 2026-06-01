@@ -33,6 +33,12 @@ export async function markHelpful(answerId) {
   return data; // { is_helpful }
 }
 
+// Admin: mark/unmark an answer as Admin Verified.
+export async function verifyAnswer(answerId, isVerified) {
+  const { data } = await api.post(`/answers/${answerId}/verify`, { is_verified: isVerified });
+  return data; // { is_verified }
+}
+
 export async function addComment(answerId, body) {
   const { data } = await api.post(`/answers/${answerId}/comments`, { body });
   return data.comment;

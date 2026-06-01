@@ -10,6 +10,7 @@ import { detectGibberish } from './gibberishService.js';
 import { recordSpamStrike } from './spamService.js';
 import { findSimilarQueries } from './vectorService.js';
 import * as taxonomyService from './taxonomyService.js';
+import { topBadge } from './badgeService.js';
 import {
   DUPLICATE_SIMILARITY_THRESHOLD,
   MODERATION_TYPE,
@@ -80,7 +81,12 @@ function serialize(obj, viewerId) {
 
   const author = plain.is_anonymous
     ? { name: 'Anonymous', anonymous: true }
-    : { id: authorId ?? null, name: authorRef?.name ?? null };
+    : {
+        id: authorId ?? null,
+        name: authorRef?.name ?? null,
+        points: authorRef?.points ?? null,
+        badge: topBadge(authorRef?.badges),
+      };
 
   // eslint-disable-next-line no-unused-vars
   const { embedding, embedding_hash, author_id, __v, ...rest } = plain;
@@ -171,7 +177,7 @@ export async function createQuery(user, payload, screenshots = []) {
     });
   }
 
-  await doc.populate('author_id', 'name');
+  await doc.populate('author_id', 'name points badges');
   return serialize(doc, user._id);
 }
 
@@ -203,7 +209,7 @@ export async function listQueries(opts = {}, viewerId) {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .populate('author_id', 'name')
+      .populate('author_id', 'name points badges')
       .lean(),
     Query.countDocuments(filter),
   ]);
@@ -256,7 +262,7 @@ export async function getQuery(id, viewerId) {
     { $inc: { access_count: 1 }, $set: { last_accessed_at: new Date() } },
     { new: true },
   )
-    .populate('author_id', 'name')
+    .populate('author_id', 'name points badges')
     .lean();
   if (!doc) throw ApiError.notFound('Query not found');
 
@@ -331,7 +337,7 @@ export async function listBookmarks(user) {
   if (marks.length === 0) return { items: [] };
   const ids = marks.map((m) => m.query_id);
   const items = await Query.find({ _id: { $in: ids }, is_deleted: false })
-    .populate('author_id', 'name')
+    .populate('author_id', 'name points badges')
     .lean();
   // Preserve bookmark order (most-recently saved first).
   const order = new Map(ids.map((id2, i) => [String(id2), i]));
@@ -391,7 +397,7 @@ export async function updateQuery(user, id, payload) {
   }
 
   await doc.save();
-  await doc.populate('author_id', 'name');
+  await doc.populate('author_id', 'name points badges');
   return serialize(doc, user._id);
 }
 
@@ -440,7 +446,7 @@ export async function moderateTaxonomy(user, id, { category, tags }) {
   doc.category = resolved.category;
   doc.tags = resolved.tags;
   await doc.save();
-  await doc.populate('author_id', 'name');
+  await doc.populate('author_id', 'name points badges');
   return serialize(doc, user._id);
 }
 

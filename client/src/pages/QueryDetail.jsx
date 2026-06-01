@@ -6,6 +6,7 @@ import {
   postAnswer,
   deleteAnswer,
   markHelpful,
+  verifyAnswer,
   reportQuery,
   reportAnswer,
   addComment,
@@ -253,6 +254,7 @@ export default function QueryDetail() {
           <AnswerCard
             key={a.id}
             answer={a}
+            isAdmin={isAdmin}
             canManage={query.is_owner || canModerate}
             canModerate={canModerate}
             canComment={query.is_owner || a.is_owner || canModerate}
@@ -273,7 +275,7 @@ export default function QueryDetail() {
   );
 }
 
-function AnswerCard({ answer, canManage, canModerate, canComment, onChange }) {
+function AnswerCard({ answer, isAdmin, canManage, canModerate, canComment, onChange }) {
   const [busy, setBusy] = useState(false);
   const canDelete = answer.is_owner || canModerate;
 
@@ -281,6 +283,16 @@ function AnswerCard({ answer, canManage, canModerate, canComment, onChange }) {
     setBusy(true);
     try {
       await markHelpful(answer.id);
+      await onChange();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onToggleVerify = async () => {
+    setBusy(true);
+    try {
+      await verifyAnswer(answer.id, !answer.is_verified);
       await onChange();
     } finally {
       setBusy(false);
@@ -301,13 +313,16 @@ function AnswerCard({ answer, canManage, canModerate, canComment, onChange }) {
   };
 
   return (
-    <article className={`answer-card ${answer.is_helpful || answer.is_accepted ? 'accepted' : ''}`}>
+    <article className={`answer-card ${answer.is_verified ? 'verified' : ''} ${answer.is_helpful || answer.is_accepted ? 'accepted' : ''}`}>
       <div className="answer-main">
-        {answer.is_helpful ? (
-          <span className="badge helpful-badge">User found helpful</span>
-        ) : (
-          answer.is_accepted && <span className="badge accepted-badge">✓ Solution</span>
-        )}
+        <div className="answer-badges">
+          {answer.is_verified && <span className="badge verified-badge">✅ Admin Verified</span>}
+          {answer.is_helpful ? (
+            <span className="badge helpful-badge">User found helpful</span>
+          ) : (
+            answer.is_accepted && <span className="badge accepted-badge">✓ Solution</span>
+          )}
+        </div>
         <div className="answer-body">
           <Markdown>{answer.body}</Markdown>
         </div>
@@ -318,6 +333,11 @@ function AnswerCard({ answer, canManage, canModerate, canComment, onChange }) {
           {canManage && (
             <button className="btn-link" onClick={onToggleHelpful} disabled={busy}>
               {answer.is_helpful ? 'Reopen (remove helpful)' : 'Mark as helpful & close'}
+            </button>
+          )}
+          {isAdmin && (
+            <button className="btn-link" onClick={onToggleVerify} disabled={busy}>
+              {answer.is_verified ? 'Remove verification' : 'Mark admin verified'}
             </button>
           )}
           {canDelete && (
@@ -400,8 +420,17 @@ function Author({ author }) {
   return (
     <span className="author-inline">
       <span className="avatar-sm">{initials(name)}</span>
-      {author.anonymous || !author.id ? name : <Link to={`/users/${author.id}`}>{name}</Link>}
-      {author.points != null && <span className="rep-mini" title="reputation">{author.points}</span>}
+      <span className="author-id">
+        <span className="author-name-row">
+          {author.anonymous || !author.id ? name : <Link to={`/users/${author.id}`}>{name}</Link>}
+          {author.points != null && <span className="rep-mini" title="reputation">{author.points}</span>}
+        </span>
+        {author.badge && (
+          <span className="author-badge" title={author.badge.label}>
+            {author.badge.icon} {author.badge.label}
+          </span>
+        )}
+      </span>
     </span>
   );
 }
