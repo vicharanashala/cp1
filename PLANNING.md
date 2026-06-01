@@ -25,7 +25,7 @@ This platform unifies the **full knowledge lifecycle** in one system. A user can
 ### In scope (MVP)
 - All three user-facing pillars: FAQ + chatbot, Ask a Query, Q&A forum.
 - Content-quality automation: gibberish detection, auto-correction, duplicate detection, amalgamation.
-- Reputation: points, leaderboard, positive + negative badges.
+- Reputation: points, positive + negative badges, an admin-verified badge.
 - Moderation & governance: queue, bans, soft-delete + audit, reporting.
 - Automated maintenance: LRU eviction, staleness, orphan cleanup, purge.
 - In-app notifications, personalized greeting.
@@ -177,13 +177,17 @@ MongoDB collections (Mongoose). Full schema definitions live in `server/models/`
 
 - **users** — identity, `role`, `points`, `badges[]`, `negative_badges[]`, `spam_flag_count`, `is_banned` / `ban_expires_at` / `ban_reason`, `login_streak`, `last_login_at`, notification prefs.
 - **refresh_tokens** — `{ user_id, token_hash, expires_at, revoked }`; makes logout actually invalidate sessions.
-- **queries** — content + `status`, `category`, `tags`, `is_anonymous`; admin verification; context enrichment (`contact_email`, `screenshots[]`); duplicate/merge (`is_flagged_duplicate`, `duplicate_of`, `similarity_score`, `merge_status`, `merged_into`, `merged_from[]`); `reports[]`; LRU (`last_accessed_at`, `access_count`, `is_archived`); soft-delete fields; `embedding[768]`; `grace_period_deadline`.
-- **answers** — `body`, `like_count`, `is_accepted`, admin verification; auto-correction (`original_body`, `was_auto_corrected`); outdated flags; soft-delete; `reports[]`.
-- **notifications** — `recipient_id`, `type`, `title`, `message`, `link`, related IDs, `is_read`.
+- **queries** — content + `status`, `category`, `tags` (both drawn from the admin **taxonomy**), `is_anonymous` (retained but always `false` — **anonymous posting is disabled**); admin verification; context enrichment (a **required** `contact_email` + `joining_date`, `screenshots[]`); duplicate/merge (`is_flagged_duplicate`, `duplicate_of`, `similarity_score`, `merge_status`, `merged_into`, `merged_from[]`); `reports[]`; community engagement (`vote_score`, `needs_attention`); LRU (`last_accessed_at`, `access_count`, `is_archived`); soft-delete fields (incl. `deleted_by` for the 15-min rollback); `embedding[768]`; `grace_period_deadline`.
+- **answers** — `body`, `like_count`, `is_accepted`, `is_helpful`, admin verification (`is_verified`, `verified_by`); auto-correction (`original_body`, `was_auto_corrected`); outdated flags; soft-delete (incl. `deleted_by`); `reports[]`. Authors may edit within a 15-minute window.
+- **taxonomy** — admin-curated `{ kind: 'category' | 'tag', name, slug }`; the only categories/tags users can pick (plus the built-in "Others" tag).
+- **votes** / **bookmarks** — per-user question up/down votes and saved questions.
+- **comments** — threaded replies under an answer (poster ↔ answer-author only), soft-deleted.
+- **notifications** — `recipient_id`, `type`, `title`, `message`, `link`, related IDs, `is_read`. (Routine answer/like/comment notifications are suppressed for admin recipients.)
 - **moderation_queue** — `type`, `status`, related query/answer, `duplicate_of_query_id`, `similarity_score`, resolution metadata.
 - **audit_log** — `action`, `entity_type`, `entity_id`, `performed_by`, `details` snapshot.
-- **faq_entries** — `category`, `question`, `answer`, `sort_order`, `source` (admin/qa), `source_query_id`, LRU fields, `is_outdated`, `embedding[768]`, soft-delete.
-- **likes** — `{ answer_id, user_id }`.
+- **faq_entries** — `category`, `question`, `answer`, `sort_order`, `source` (admin/qa), `source_query_id`, LRU fields, `is_outdated`, `embedding[768]`, soft-delete. Admin creation runs a near-duplicate guard.
+- **likes** — `{ answer_id, user_id, value }` (signed: upvote/downvote).
+- **users** — also carries `is_moderator` / `moderator_requested` and admin-authored `custom_badges[]` (incl. the auto-granted **Admin Verified** badge).
 - **chatbot_sessions** — `session_token`, `user_id`, `messages[]` (role, content, source_tier, citations, timestamp).
 
 ---
@@ -195,7 +199,7 @@ The tight free-tier quota is the main runtime risk, so the system is built to **
 - **Heuristic-first gibberish** — AI only on borderline cases.
 - **Opt-in auto-correct** — a button, not an automatic call on every submit.
 - **Embedding cache** — embed once on create/edit; never re-embed unchanged text.
-- **Seeded embeddings** — all demo content is embedded once, offline, so browsing/search/leaderboard/chatbot-retrieval make zero live calls.
+- **Seeded embeddings** — all demo content is embedded once, offline, so browsing/search/chatbot-retrieval make zero live calls.
 - **Queue + exponential backoff** on HTTP 429.
 - **Graceful degradation** — AI features fall back instead of erroring.
 - **Model routing** — `flash-lite` for cheap/high-volume checks; `flash` for chat.
@@ -268,11 +272,12 @@ Run via `node-cron`; each is a plain function **also triggerable from the admin 
 
 ## 11. Reputation & thresholds
 
-- **Positive badges (tiered):** 🥉 Helper (50 pts) · 🥈 Contributor (150) · 🥇 Expert (500) · 🏆 Legend (1000).
+- **Positive badges (tiered):** 🥉 Helper (30 pts) · 🥈 Contributor (100) · 🥇 Expert (200) · 🏆 Legend (300). The highest badge a member holds is shown under their name in the forum.
+- **Admin Verified ✅** — auto-granted to a member when an admin marks one of their answers verified (kept even if later unverified).
 - **Negative badges (admin-issued):** ⚠️ Warning · 🚫 Restricted · ☠️ Suspended, visible on profiles.
 - **Spam escalation:** 1st warning · 2nd ⚠️ + 24h ban · 5th 🚫 · 10th ☠️.
-- **LRU archival:** 90 days unaccessed.
-- All thresholds are reasonable defaults, centralized and easily tunable.
+- **LRU archival:** 90 days unaccessed. **Edit & rollback windows:** authors edit their own posts for 15 min; admins/mods can undo a deletion for 15 min.
+- All thresholds are reasonable defaults, centralized in `server/config/constants.js` and easily tunable.
 
 ---
 
@@ -281,8 +286,9 @@ Run via `node-cron`; each is a plain function **also triggerable from the admin 
 - **Auth:** short-lived JWT access tokens + refresh tokens whose hashes are stored and revoked on logout; bcrypt password hashing.
 - **Authorization:** role middleware (`auth`, `admin`, `banCheck`) gates protected/admin routes; non-admins get 403.
 - **Abuse handling:** gibberish gate + escalating spam penalties + 24h auto-ban + negative badges.
-- **Data integrity:** soft-delete everywhere with an audit log (who/what/when + data snapshot); scheduled purge for true deletion.
-- **Privacy:** anonymous posts hide identity in the UI but retain `author_id` for moderation; production should use company AI keys.
+- **Data integrity:** soft-delete everywhere with an audit log (who/what/when + data snapshot); scheduled purge for true deletion. Deletions are reversible by an admin/moderator for 15 minutes; authors may edit their own content for 15 minutes after posting.
+- **Attribution:** **anonymous posting is disabled** — every question is attributed to its author (the `is_anonymous` field is retained for legacy data but always `false`). Production should use company AI keys.
+- **Taxonomy control:** users can only apply admin-curated categories/tags (or the built-in "Others" tag), enforced server-side — they can't inject their own.
 - **Rate limiting:** `express-rate-limit` on sensitive/expensive endpoints.
 
 ---
@@ -338,7 +344,13 @@ The MVP is honest about its scale limit: in-app cosine similarity loads embeddin
 | Local demo, company server for prod | GitHub can't host the backend; persistent server supports cron/uploads as designed |
 | Docker Compose + seed + demo video | Repo is the deliverable (remote work); must be reproducible and self-demonstrating |
 | Soft-delete + audit everywhere | Safe, reversible deletion with accountability |
-| Anonymous: hide identity, keep author_id | Preserves moderation/ban ability on the underlying account |
 | Email notifications skipped | Avoids external service dependency; in-app only |
-| Thresholds (badges 50/150/500/1000; spam 2/5/10; LRU 90d) | Reasonable defaults, easily tunable |
 | `mongodb-memory-server` + mocked AI in CI | Keeps CI fast, deterministic, key-free, and quota-safe |
+| **Anonymous posting disabled** (was: hide identity, keep author_id) | A support-FAQ context needs accountable, attributable questions; identity is always shown |
+| **Admin-curated taxonomy** (categories/tags) | Keeps the knowledge base consistent — users choose from a vetted list or "Others", not free text |
+| **Joining date required on questions** | Captures programme context for moderators; no posting without it |
+| **15-min edit window + 15-min delete rollback** | Lets authors fix slips and admins/mods undo mistakes, without leaving content editable/destroyed forever |
+| **Admin-verified answers + badge** | An authoritative signal on top of community "helpful"; rewards the answerer |
+| **Leaderboard removed** | De-emphasised public ranking in favour of per-author badges shown in-context |
+| **Can't answer your own question** | Reinforces the support-ticket model (others help the asker) |
+| Thresholds (badges 30/100/200/300; spam 2/5/10; LRU 90d; edit/rollback 15m) | Reasonable defaults, centralized in `constants.js`, easily tunable |

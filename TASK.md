@@ -3,9 +3,9 @@
 > **Living task tracker.** Active work, milestones, backlog, and anything discovered mid-process.
 > Convention: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked. Add new items as they surface — never delete, mark done. Reference `PLANNING.md` for the *why*.
 
-**Last updated:** 2026-05-30
-**Current focus:** Phase 2 (Milestones 9–14) COMPLETE — "Frozen Precision" redesign + engagement/social backend shipped as a stacked PR chain. MVP (1–8) shipped.
-**Build approach:** vertical slice — one complete end-to-end loop before going wide. Phase 2 ships **one milestone per PR**, pushed cleanly, implemented only with the maintainer's go-ahead.
+**Last updated:** 2026-06-01
+**Current focus:** Phase 3 (post-launch product batches) COMPLETE — taxonomy/named-posting + a 25-item fix batch shipped directly to `main`. Phases 1–2 (MVP + "Frozen Precision" redesign) shipped.
+**Build approach:** vertical slice — one complete end-to-end loop before going wide. Phase 3 batches are grouped into clean Conventional commits pushed straight to `main` on the maintainer's request.
 
 ---
 
@@ -28,6 +28,9 @@
 | 12 | Admin dashboard re-skin | KPIs + needs-attention + audit feed (FE) | `[x]` |
 | 13 | Engagement backend | Votes, bookmarks, answer counts (BE+FE) | `[x]` |
 | 14 | Activity/comments/settings | Feed, replies, settings, avatars (BE+FE) | `[x]` |
+| — | **Phase 3 — Post-launch product batches** | _maintainer-requested changes, shipped to `main`_ | |
+| A | Taxonomy & named posting | Admin categories/tags, joining date, email-id queue | `[x]` |
+| B | Forum/admin fix batch | Permissions, verify, edit/rollback, search, polish (8 commits) | `[x]` |
 
 ---
 
@@ -240,6 +243,34 @@ Goal: remaining reference features that need backend. **Backend + UI wiring.**
 
 ---
 
+# Phase 3 — Post-launch product batches (2026-06-01)
+
+> Maintainer-requested product changes shipped directly to `main` after launch, grouped into clean Conventional commits. Every commit kept `lint` (0 errors) / `test` / `build` green.
+
+## Batch A — Admin taxonomy, named posting & email-id queue (commit `717628d`)
+
+- [x] **Taxonomy** model + service: admin-curated categories & tags, seeded defaults, built-in non-deletable "Others" tag; public `GET /api/taxonomy`, admin `POST`/`DELETE /api/admin/taxonomy`
+- [x] Ask/Edit forms use a **category dropdown + tag checkboxes** (no free-form tags); server rejects categories/tags outside the taxonomy
+- [x] **No anonymous posting** — `is_anonymous` forced false; the toggle is gone
+- [x] **Joining date** field on questions (`Query.joining_date`)
+- [x] Admin **attention queue lists askers by email id** (click to open the question)
+- [x] New admin **"Categories & Tags"** tab
+
+## Batch B — Forum/admin fix batch, 8 commits (`c438944` → `a0c7e3e`)
+
+- [x] **Permissions** (`c438944`): can't answer your own question; moderators can mark-helpful / rate / flag-for-attention; mod/admin re-tag endpoint `PATCH /queries/:id/taxonomy`; Report hidden from admins/mods
+- [x] **Remove the leaderboard** (`a282c3b`) — page/route/nav/api + `/users/leaderboard` + `getLeaderboard` + its test
+- [x] **Admin-verified answers** (`563dd6c`): `POST /answers/:id/verify` (admin) → `is_verified`, sorts first, grants the answerer the persistent **Admin Verified** badge; held badge shown under each author's name in the forum
+- [x] **15-min edit window + 15-min rollback** (`81e56fe`): authors edit own question/answer within 15 min (added `PATCH /answers/:id`); `deleted_by` + restore endpoints; admin **Rollback** tab (`GET /admin/recent-deletions`)
+- [x] **Forum search + ordering** (`2b8ce39`): `GET /queries/search` (hybrid) surfaced in the FAQ search; resolved questions sink to the bottom of the list
+- [x] **Admin batch** (`3d93cec`): `GET /admin/moderators` + **Moderators** tab; inline re-tag panel in the thread; `needs_attention` count + dashboard attention item; admins no longer get routine answer/like/comment notifications
+- [x] **Attachments + posting UX** (`8230f7c`): uploads served inline with a zoomable lightbox ("N attachments added"); report-reason modal; **joining date required** server-side; reworded screenshot prompt
+- [x] **UI fixes** (`a0c7e3e`): notification dropdown closes on outside-click/Esc; **FAQ near-duplicate guard** on create (with force override); auth-screen alignment; admin tabs scroll in one row
+- [x] Docs: README, PLANNING, TASK updated for both batches
+- [x] Live data fix: the persistent-DB admin account (`admin@example.com`) was renamed from "Surya" → "Admin"
+
+---
+
 ## Backlog (post-MVP / nice-to-have)
 
 - [ ] Pluggable AI-provider interface (beyond Gemini)
@@ -256,6 +287,8 @@ Goal: remaining reference features that need backend. **Backend + UI wiring.**
 
 - **2026-05-30** — QA & security audit completed (`AUDIT_REPORT.md`); fixes + regression suite on branch `fix/security-audit` (PR #1).
 - **2026-05-30** — Adopted the `FrontendReference/` "Frozen Precision" design kit as the UI source of truth. Gap analysis in `FRONTEND_GAP_REPORT.md` → Phase 2 (Milestones 9–14) added above.
+- **2026-05-31** — Relaxed positive-badge thresholds to **30/100/200/300** (were 50/150/500/1000) and added the admin-grantable **moderator** role; support-ticket model hardened (no peer voting/commenting; "helpful" closes the question).
+- **2026-06-01** — Phase 3 batches shipped (see above). Convention note: **posting now requires a joining date and a taxonomy-valid category**, so any new code/test that creates a query must supply both. Anonymous posting and the leaderboard were removed.
 
 ---
 
@@ -265,7 +298,7 @@ The ~8-minute path that touches nearly every feature:
 
 - [ ] Register → personalized greeting
 - [ ] Ask a question → gibberish caught → auto-correct suggests fix → duplicate warning fires → attach screenshot
-- [ ] Second user answers → like → mark resolved → points + badge appear → leaderboard updates
+- [ ] Second user answers → like → mark resolved → points + badge appear (shown under the author's name); admin marks the answer "Admin Verified"
 - [ ] Switch to admin → dashboard → moderation queue → merge duplicate → ban spammer (countdown banner)
 - [ ] Push resolved Q&A into FAQ → chatbot answers via RAG
 - [ ] Trigger LRU / staleness jobs on a click
