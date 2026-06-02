@@ -528,3 +528,196 @@ The Express API exposes `GET /api/health` that returns the application status, d
 ```
 
 ---
+
+## Application Architecture — Request Flow
+
+Understanding how a request moves through the server is important for anyone contributing code. The architecture follows a strict layered pattern: **route → controller → service → model/boundary**.
+
+```mermaid
+graph TD
+    REQ["Incoming HTTP Request"] --> MW1["Security Headers Middleware"]
+    MW1 --> MW2["CORS - origin-gated"]
+    MW2 --> MW3["JSON Body Parser - 1MB limit"]
+    MW3 --> MW4["Morgan Logger - dev only"]
+    MW4 --> ROUTER["/api Router"]
+
+    ROUTER --> AUTH_MW{"Auth Middleware<br>auth / optionalAuth"}
+    AUTH_MW --> BAN{"banCheck<br>write endpoints"}
+    BAN --> RL{"Rate Limiter<br>authLimiter / aiLimiter / writeLimiter"}
+    RL --> CTRL["Controller<br>validate + call service + send response"]
+    CTRL --> SVC["Service<br>business logic, validations, orchestration"]
+
+    SVC --> MODEL["Mongoose Model<br>schema + DB ops via db.js"]
+    SVC --> AI_MOD["ai.js Boundary<br>embed / cheapJson / chat"]
+
+    MODEL --> DB[("MongoDB")]
+    AI_MOD --> GEMINI["Gemini API or Mock"]
+
+    SVC --> CTRL
+    CTRL --> RES["JSON Response"]
+
+    style AUTH_MW fill:#e76f51,color:#fff
+    style SVC fill:#264653,color:#fff
+    style MODEL fill:#2a9d8f,color:#fff
+    style AI_MOD fill:#2a9d8f,color:#fff
+```
+
+**Routes** (`server/routes/`) define the HTTP method, path, and middleware chain for each endpoint. They do not contain business logic. There are 11 route modules covering auth, queries, answers, notifications, users, admin, FAQ, chatbot, jobs, and taxonomy.
+
+**Controllers** (`server/controllers/`) are thin — they extract request parameters, call the appropriate service function, and send back the response. Controllers do not access models or boundaries directly.
+
+**Services** (`server/services/`) contain all business logic. They operate on Mongoose models, call the AI boundary when needed, and compose the multi-step flows (duplicate detection, gibberish checks, solution marking, chatbot RAG pipeline). There are 14 service modules.
+
+**Middleware** (`server/middleware/`) provides cross-cutting concerns:
+
+| Middleware | Purpose |
+|---|---|
+| `auth` / `optionalAuth` / `admin` | JWT verification, user hydration, role gates |
+| `banCheck` | Blocks banned users from write operations |
+| `rateLimit` (3 presets) | `authLimiter` (30 req/15min), `aiLimiter` (20 req/min), `writeLimiter` (40 req/min) |
+| `upload` | Multer configuration — up to 4 image files, MIME-validated, MIME-derived extensions |
+| `error` | Central error handler — normalises Mongoose errors, hides stack traces in production |
+
+---
+
+## Constants & Configuration Centralisation
+
+All tunable thresholds, enum values, badge definitions, and timing windows are centralised in `server/config/constants.js`. This makes the system's behaviour easy to adjust without searching across the codebase.
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `DUPLICATE_SIMILARITY_THRESHOLD` | `0.8` | Cosine similarity above which a new query is flagged as a potential duplicate |
+| `CHATBOT_MATCH_THRESHOLD` | `0.3` | Minimum cosine similarity for a retrieved FAQ/forum entry to count as a chatbot match |
+| `AMALGAMATION_SIMILARITY_THRESHOLD` | `0.6` | Broader threshold for grouping related queries for admin review |
+| `FAQ_DUPLICATE_THRESHOLD` | `0.95` | Near-duplicate guard when admins create new FAQ entries |
+| `EMBEDDING_DIMS` | `768` | Fixed embedding vector dimensionality |
+| `EDIT_WINDOW_MINUTES` | `15` | Authors can edit their own posts for this long |
+| `ROLLBACK_WINDOW_MINUTES` | `15` | Admins/moderators can undo a deletion for this long |
+| `GRACE_PERIOD_HOURS` | `48` | Time before solution finalisation kicks in |
+| `AUTO_BAN_HOURS` | `24` | Duration of automatic spam bans |
+| `LRU_ARCHIVE_DAYS` | `90` | Archive resolved queries unaccessed for this many days |
+| `SOFT_DELETE_PURGE_DAYS` | `30` | Hard-delete items soft-deleted beyond this retention window |
+| `STALENESS_DAYS` | `180` | Flag answers older than this as potentially outdated |
+
+Centralising constants here means a behaviour change (e.g., extending the edit window or tightening the duplicate threshold) requires touching exactly one file — no hunting for magic numbers scattered across services.
+
+---
+
+## Scheduled Jobs & the Cron Registry
+
+Eight maintenance jobs run on cron schedules via `node-cron` and are also individually triggerable from the admin panel through `POST /api/jobs/:name`. The registry in `server/jobs/index.js` maps each job name to its schedule, description, and handler function:
+
+| Job | Schedule | What it does |
+|---|---|---|
+| `finalize-solutions` | Daily at 03:00 | Resolves queries past their 48-hour grace period (both Path A — author-selected, and Path B — auto-select most liked) |
+| `expire-bans` | Hourly | Lifts time-limited bans whose deadline has passed |
+| `badge-recalc` | Daily at 02:00 | Resyncs every user's positive badge array to their current point total |
+| `lru-eviction` | Daily at 04:00 | Archives resolved queries unaccessed for 90+ days |
+| `staleness-check` | Weekly (Monday 05:00) | Flags answers older than the staleness window as potentially outdated |
+| `orphan-cleanup` | Weekly (Tuesday 05:00) | Removes likes and chatbot sessions referencing deleted records |
+| `embedding-refresh` | Weekly (Wednesday 05:00) | Re-embeds queries whose text has changed since their last embedding |
+| `soft-delete-purge` | Monthly (1st at 06:00) | Hard-deletes content that was soft-deleted beyond the retention window, with audit logging |
+
+Each job is a plain async function. The `scheduleJobs()` function registers all cron schedules at server startup (called from `server.js`). The `runJob(name)` function allows any registered job to be executed on demand by the admin panel. Job failures are caught and logged without crashing the server.
+
+---
+
+## ESLint Configuration
+
+Linting uses ESLint 9's flat config format. The configuration is layered across three files:
+
+**Root config** (`eslint.config.js`) — applies to the entire monorepo. Extends `@eslint/js` recommended rules, ignores `node_modules`, `dist`, `build`, and `coverage` directories, targets ES2023 with module source type, and sets project-specific rules: `eqeqeq: smart`, `prefer-const: warn`, `no-unused-vars: warn` (with `_`-prefixed variables ignored).
+
+**Server config** (`server/eslint.config.js`) — extends the root config and adds Jest globals for files in the `tests/` directory.
+
+**Client config** (`client/eslint.config.js`) — extends the root config and adds React and React Hooks plugins with browser globals.
+
+Running `npm run lint` executes ESLint sequentially across both workspaces. The CI pipeline enforces zero lint errors. The flat config format (ESLint 9) is used throughout — no legacy `.eslintrc` files exist in this project.
+
+---
+
+## Security Layers
+
+The Express application applies multiple security measures, layered through middleware and configuration:
+
+**Security headers** — set on every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `X-DNS-Prefetch-Control: off`. The `X-Powered-By` header is explicitly removed to avoid advertising the server technology.
+
+**CORS** — origin-gated to `CLIENT_ORIGIN` (defaults to `http://localhost:5173`) with credentials enabled. Requests from unknown origins are rejected before they reach any route.
+
+**Body size limit** — JSON and URL-encoded bodies are capped at 1MB. Requests exceeding this are rejected early, before route handlers are invoked.
+
+**Upload validation** — Multer validates MIME types (PNG, JPEG, GIF, WEBP only), derives file extensions from the MIME type (not the client-controlled filename), generates random filenames, and caps individual files at the configured `MAX_UPLOAD_MB`. Files are served with `Content-Disposition: inline` and `X-Content-Type-Options: nosniff` — this prevents a maliciously named upload from being executed as HTML or script, providing defence-in-depth against stored XSS.
+
+**Rate limiting** — three tiers via `express-rate-limit`: auth endpoints (30 req/15min), AI-backed endpoints (20 req/min), and general writes (40 req/min). Rate limiting is automatically skipped during tests for determinism and can be globally disabled via `DISABLE_RATE_LIMIT=true` for shared-IP demo environments where all visitors would otherwise collapse into a single rate-limit bucket.
+
+**Proxy trust** — configurable via `TRUST_PROXY` so `req.ip` and rate-limit keying work correctly behind reverse proxies, tunnels, or CDNs.
+
+---
+
+## Commit & PR Conventions
+
+The repository is public and treated as a portfolio piece. The team follows strict conventions to maintain a clean, readable history.
+
+### Conventional Commits
+
+Every commit message follows the [Conventional Commits](https://www.conventionalcommits.org/) specification with a scope:
+
+```
+<type>(<scope>): <imperative subject>
+
+[optional body with detail]
+```
+
+The recognised types:
+
+| Type | When to use |
+|---|---|
+| `feat` | A new feature or user-facing capability |
+| `fix` | A bug fix |
+| `test` | Adding or updating tests |
+| `docs` | Documentation changes (README, PLANNING, wiki, comments) |
+| `chore` | Maintenance tasks (dependency updates, config tweaks) |
+| `ci` | Changes to CI/CD workflows |
+| `build` | Build system changes (Dockerfile, Vite config, package.json scripts) |
+| `refactor` | Code changes that neither fix a bug nor add a feature |
+| `perf` | Performance improvements |
+
+Representative examples from the project:
+
+```
+feat(queries): flag >80% duplicates into the moderation queue
+fix(client): stop the chatbot from losing its session on reload
+test(server): cover the ban-expiry job
+docs(task): mark Milestone 7 complete
+chore(ci): bump actions/setup-node to v4
+```
+
+The subject line is kept imperative ("add", "fix", "cover") and under ~72 characters. Further detail goes in the commit body.
+
+### Branching & Pull Requests
+
+- **Branch off `main`** using descriptive prefixes: `feat/duplicate-detection`, `fix/chatbot-session`, `test/ban-expiry`.
+- **One logical change per PR.** Keep PRs focused.
+- **Fill in the PR template** — it asks for what changed, why, and how it was tested.
+- **CI must be green.** All three checks (lint, test, build) must pass before merge.
+- **Squash-merge** to keep the main branch history clean and linear.
+
+The PR template (`PULL_REQUEST_TEMPLATE.md`) includes a checklist that every contributor must verify before requesting review:
+
+```markdown
+- [ ] `npm run lint` passes (0 errors)
+- [ ] `npm test` passes
+- [ ] `npm run build` passes
+- [ ] Tests added/updated for the change
+- [ ] AI/DB access stays behind the swappable boundaries (server/config/ai.js, server/config/db.js)
+- [ ] Commits follow Conventional Commits
+```
+
+The fifth checklist item — confirming that AI and database access remains behind the swappable boundaries — is a deliberate architectural guardrail baked into the review process.
+
+### Issue Templates
+
+The repository provides two issue templates in `.github/ISSUE_TEMPLATE/`:
+
+- **Bug report** — structured fields for description, reproduction steps, expected vs. actual behaviour, and environment (OS, Node version, browser, AI mode).
+- **Feature request** — structured fields for the problem being solved, proposed solution, and alternatives considered.
