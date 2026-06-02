@@ -257,7 +257,7 @@ Message → embed → Tier 1: search FAQ
             → user says Yes (re-ask with check_forum:true)
                 → Tier 2: search resolved community Q&A
                 → match → answer + citation that redirects to the forum thread
-                → no match / 429 → graceful fallback ("browse the FAQ / open a ticket")
+                → no match / 429 → graceful fallback ("browse the FAQ / raise a query")
             → user says No → stay in the FAQ; forum DB never queried
 ```
 

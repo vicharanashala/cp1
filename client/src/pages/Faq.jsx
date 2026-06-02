@@ -111,6 +111,9 @@ export default function Faq() {
         <span className="material-symbols-outlined">bolt</span>
         Semantic search is active — try asking full questions like “how do I report data?”
       </p>
+      <p className="search-hint">
+        Can't find an answer? Check the forum or <Link to="/ask">raise a Query</Link>.
+      </p>
 
       {results !== null ? (
         <>
@@ -141,7 +144,7 @@ export default function Faq() {
               <h2>Community questions</h2>
               {forumResults.length === 0 ? (
                 <p className="muted">
-                  Nothing in the forum either. <Link to="/ask">Open a ticket</Link> and the community
+                  Nothing in the forum either. <Link to="/ask">Raise a Query</Link> and the community
                   will help.
                 </p>
               ) : (
@@ -208,7 +211,7 @@ export default function Faq() {
           <p className="muted">Our community and team can help with deeper questions.</p>
         </div>
         <Link to="/ask" className="btn-primary">
-          Open a Ticket
+          Raise a Query
         </Link>
       </div>
     </div>

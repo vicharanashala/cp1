@@ -73,12 +73,12 @@ The FAQ is always the first place we look — and we only reach into the communi
 **FAQ search bar** (the *Browse FAQs* page)
 1. As you type, Curio searches the **curated FAQ** semantically and shows matching entries.
 2. If nothing matches, the page asks: **"Not in the FAQ — do you want me to check in the forum?"** with a **Yes, check the forum** button. The forum database is *not* touched until you click it.
-3. On **Yes**, Curio searches the community forum and lists matching questions; clicking one **redirects you to that forum thread**. If the forum has nothing either, it points you to *open a ticket*.
+3. On **Yes**, Curio searches the community forum and lists matching questions; clicking one **redirects you to that forum thread**. If the forum has nothing either, it points you to *raise a query*.
 
 **AI chatbot** (the floating assistant)
 1. The assistant answers from the **FAQ first** and cites the FAQ entry it used.
 2. If the FAQ has no confident answer, it does **not** silently search the forum — it replies *"I couldn't find this in the FAQ. Do you want me to check the community forum?"* with **Yes / No** buttons.
-3. On **Yes**, it searches the resolved community Q&A and, on a match, **redirects you to the forum thread** (a clickable citation). On **No**, it stays put and suggests browsing the FAQ or opening a ticket.
+3. On **Yes**, it searches the resolved community Q&A and, on a match, **redirects you to the forum thread** (a clickable citation). On **No**, it stays put and suggests browsing the FAQ or raising a query.
 
 This keeps FAQ answers authoritative and makes any jump into community-sourced content an explicit, opt-in choice. Under the hood the chatbot's `/api/chatbot/ask` accepts a `check_forum` flag: the first call returns `source_tier: "await_forum"`, and the follow-up with `check_forum: true` returns the `community` match (or a `fallback`).
 

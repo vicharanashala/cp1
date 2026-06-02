@@ -9,7 +9,7 @@ import { cosineSimilarity } from './vectorService.js';
 import { CHATBOT_MATCH_THRESHOLD } from '../config/constants.js';
 
 const FALLBACK =
-  "I couldn't find this in the FAQ or the community forum. Try rephrasing your question, browse the FAQ, or open a ticket so the community can help.";
+  "I couldn't find this in the FAQ or the community forum. Try rephrasing your question, browse the FAQ, or raise a query so the community can help.";
 
 // Shown when the FAQ has no confident answer: the assistant asks permission
 // before searching the community forum (mirrors the FAQ search-bar prompt).

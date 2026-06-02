@@ -24,7 +24,7 @@ export default function Support() {
           <strong>Ask the Community</strong>
           <p className="muted">Post a question and get help from contributors.</p>
           <Link to="/ask" className="btn-secondary">
-            Open a Ticket
+            Raise a Query
           </Link>
         </li>
       </ul>

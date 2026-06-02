@@ -96,7 +96,7 @@ export default function Chatbot() {
       ...m,
       {
         role: 'assistant',
-        content: 'No problem. You can browse the FAQ or open a ticket and the community will help.',
+        content: 'No problem. You can browse the FAQ or raise a query and the community will help.',
         source_tier: 'fallback',
       },
     ]);
