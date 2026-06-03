@@ -15,7 +15,7 @@ What makes Curio different is that it doesn't decay like a typical wiki. The bes
 This documentation is written feature-first and in plain language. Follow it in order for the full picture, or jump straight to the area you need:
 
 1. **[Authentication & User Accounts](Authentication-and-User-Accounts)** — User identity, secure register/login, token rotation, profiles, notification preferences, roles, and account ban controls.
-2. **[Ask a Query & Forum Engine](Ask-a-Query-and-Forum-Engine)** — Question submission and its quality gates (gibberish, spam, duplicate detection), the support-ticket answering loop, voting, bookmarks, and automated solution finalization.
+2. **[Ask a Query & Forum Engine](Ask-a-Query-and-Forum-Engine)** — Question submission and its quality gates (gibberish, spam, unfinished-question, and duplicate detection, plus an optional "Refine with AI" pass), the support-ticket answering loop, voting, bookmarks, and automated solution finalization.
 3. **[Reputation, Badges & Moderation](Reputation-Badges-and-Moderation)** — The upward-only points system, badge tiers, negative flags, the expert-to-moderator pipeline, and admin-verified answers.
 4. **[FAQ Knowledge Base & AI Chatbot](FAQ-Knowledge-Base-and-AI-Chatbot)** — Semantic FAQ search, category browsing, promote-to-FAQ, and the consent-gated, grounded chatbot.
 5. **[Admin Dashboard & Maintenance](Admin-Dashboard-and-Maintenance)** — Admin control tabs, moderation and attention queues, audit logs, the 15-minute rollback window, and the 8 automated background jobs.
