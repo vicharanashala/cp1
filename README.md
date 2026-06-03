@@ -1,4 +1,4 @@
-<p align="right"><a href="#team"><b> Team </b></a></p>
+<p align="right"><a href="https://github.com/vicharanashala/cp1/wiki"><b>📖 Wiki</b></a> · <a href="#team"><b>👥 Team →</b></a></p>
 
 <div align="center">
 
@@ -8,7 +8,13 @@
 
 *Ask. Answer. Resolve. Promote. — the full knowledge lifecycle in one MERN platform.*
 
+**[📖 Read the full documentation on the Wiki →](https://github.com/vicharanashala/cp1/wiki)**
+
 </div>
+
+---
+
+> 📖 **New here? Start with the [Curio Wiki](https://github.com/vicharanashala/cp1/wiki)** — feature-by-feature guides to authentication, the Q&A forum, reputation & moderation, the FAQ + AI chatbot, the admin dashboard, and the architecture. This README is the quick overview; the Wiki is the deep dive.
 
 ---
 
