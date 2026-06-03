@@ -26,7 +26,7 @@ Curio is an npm-workspaces monorepo with two packages — `client` (React/Vite) 
 This is the most important design decision in the project:
 
 - **`server/config/db.js`** — the *only* file that opens a database connection. It accepts an optional URI override, which is how tests inject an in-memory database without touching the production connection string. To point Curio at a company-managed MongoDB instance, you change one environment variable.
-- **`server/config/ai.js`** — the *only* file that calls the AI provider. It exposes four clean methods (embed, batch-embed, cheap JSON check, chat) and handles all rate-limit resilience internally (serial queue + exponential backoff). When no API key is set, every method returns a deterministic offline result — mock embeddings use a hash-based vector generator that produces stable, normalised vectors so cosine similarity still works correctly in dev and test.
+- **`server/config/ai.js`** — the *only* file that calls the AI provider. It exposes four clean methods (embed, batch-embed, cheap JSON check, chat) and handles all rate-limit resilience internally (serial queue + exponential backoff). When several keys are configured (`AI_API_KEYS`, from different accounts), requests are **rotated round-robin** across them to spread quota, and a key that hits a rate limit is skipped on the next attempt. When no API key is set, every method returns a deterministic offline result — mock embeddings use a hash-based vector generator that produces stable, normalised vectors so cosine similarity still works correctly in dev and test.
 
 This invariant — "nothing else imports the SDK or opens a connection" — is enforced by code review and the PR checklist.
 
@@ -69,7 +69,7 @@ A second workflow (`deploy.yml`) re-runs the full verify gate and contains a **c
 
 The production deployment model is simple: the CI pipeline verifies the code, builds a Docker image tagged with the commit SHA, and the company's platform rolls it out. Environment variables (database URI, AI key, JWT secrets) are injected as repository secrets at deploy time.
 
-A `GET /api/health` endpoint reports application status, database connection state, AI mode (mock or live), and uptime — suitable for Docker healthchecks and load-balancer probes.
+A `GET /api/health` endpoint reports application status, database connection state, AI mode (mock or live), the number of AI keys in rotation, and uptime — suitable for Docker healthchecks and load-balancer probes.
 
 ### 8. Security Layers (Defence in Depth)
 
