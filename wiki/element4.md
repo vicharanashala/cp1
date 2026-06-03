@@ -1,46 +1,5 @@
 # FAQ Knowledge Base & AI Chatbot
 
-Semantic FAQ search, category accordions, promote-Q&A-to-FAQ, the tiered grounded chatbot (FAQ → resolved queries → fallback), embeddings/cosine similarity, and the swappable AI mock/live boundary.
-
-**Primary sources:** `server/services/faqService.js`, `server/services/chatbotService.js`, `server/services/vectorService.js`, `server/config/ai.js`, `client/src/pages/Faq.jsx`, `client/src/components/Chatbot.jsx`.
-
----
-
-## Table of Contents
-
-1. [Overview](#1-overview)
-2. [Data Model — FaqEntry](#2-data-model--faqentry)
-3. [Embeddings and Cosine Similarity](#3-embeddings-and-cosine-similarity)
-4. [FAQ Service](#4-faq-service)
-   - A. [Listing FAQs — Category Grouping](#a-listing-faqs--category-grouping)
-   - B. [Hybrid Semantic Search](#b-hybrid-semantic-search)
-   - C. [Creating FAQ Entries](#c-creating-faq-entries)
-   - D. [Updating and Soft-Deleting Entries](#d-updating-and-soft-deleting-entries)
-   - E. [Promoting a Resolved Q&A to FAQ](#e-promoting-a-resolved-qa-to-faq)
-5. [FAQ Routes and Access Control](#5-faq-routes-and-access-control)
-6. [FAQ Page — Frontend](#6-faq-page--frontend)
-   - A. [Category Accordions](#a-category-accordions)
-   - B. [Live Semantic Search](#b-live-semantic-search)
-   - C. [Consent-Gated Forum Fallback](#c-consent-gated-forum-fallback)
-7. [Chatbot Service — Tiered Grounded RAG Pipeline](#7-chatbot-service--tiered-grounded-rag-pipeline)
-   - A. [Tier 1 — Curated FAQ Answer](#a-tier-1--curated-faq-answer)
-   - B. [Tier 2 — Consent and Resolved Community Q&A](#b-tier-2--consent-and-resolved-community-qa)
-   - C. [Tier 3 — Graceful Fallback](#c-tier-3--graceful-fallback)
-   - D. [Session Management](#d-session-management)
-   - E. [Prompt Construction and Grounded Composition](#e-prompt-construction-and-grounded-composition)
-8. [Chatbot Routes and Rate Limiting](#8-chatbot-routes-and-rate-limiting)
-9. [Chatbot Component — Frontend (Chatbot.jsx)](#9-chatbot-component--frontend-chatbotjsx)
-10. [The AI Module — Swappable Mock/Live Boundary](#10-the-ai-module--swappable-mocklive-boundary)
-    - A. [Mock Mode](#a-mock-mode)
-    - B. [Live Mode — Gemini via @google/genai](#b-live-mode--gemini-via-googlegenai)
-    - C. [Request Queue and Exponential Backoff](#c-request-queue-and-exponential-backoff)
-    - D. [Public API Surface](#d-public-api-surface)
-11. [Key Thresholds and Constants](#11-key-thresholds-and-constants)
-12. [Embedding Refresh Job](#12-embedding-refresh-job)
-13. [End-to-End Flow Diagrams](#13-end-to-end-flow-diagrams)
-14. [Production Swap Guide](#14-production-swap-guide)
-
----
 
 ## 1. Overview
 
