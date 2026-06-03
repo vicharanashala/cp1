@@ -41,8 +41,8 @@ export const restore = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-export const checkGrammar = asyncHandler(async (req, res) => {
-  const result = await queryService.checkGrammar(req.body?.text);
+export const refine = asyncHandler(async (req, res) => {
+  const result = await queryService.refineText(req.body?.text);
   res.json(result);
 });
 
