@@ -20,6 +20,17 @@ const secret = (key, devFallback) => {
   return value || devFallback;
 };
 
+// Collect the configured AI keys. AI_API_KEYS (comma-separated) spreads live
+// load across multiple provider accounts via round-robin; AI_API_KEY remains
+// supported as the single-key form. Both are merged and de-duplicated. Tests
+// get zero keys (→ mock mode) so the suite stays deterministic and offline
+// regardless of any local .env.
+const parseApiKeys = () => {
+  if (process.env.NODE_ENV === 'test') return [];
+  const raw = `${process.env.AI_API_KEYS ?? ''},${process.env.AI_API_KEY ?? ''}`;
+  return [...new Set(raw.split(',').map((k) => k.trim()).filter(Boolean))];
+};
+
 export const config = Object.freeze({
   env: process.env.NODE_ENV ?? 'development',
   isProd: process.env.NODE_ENV === 'production',
@@ -36,17 +47,19 @@ export const config = Object.freeze({
   },
 
   ai: {
-    // Tests must stay deterministic and offline: ignore any real key under
-    // NODE_ENV=test so a local `.env` can't push the suite into live mode
-    // (non-deterministic embeddings, live quota, network flakiness).
-    apiKey: process.env.NODE_ENV === 'test' ? '' : (process.env.AI_API_KEY ?? ''),
+    // All configured keys, in rotation order (empty under test — see above).
+    apiKeys: parseApiKeys(),
+    // Back-compatible single-key accessor: the first key in the ring.
+    get apiKey() {
+      return this.apiKeys[0] ?? '';
+    },
     chatModel: process.env.AI_CHAT_MODEL ?? 'gemini-2.5-flash',
     cheapModel: process.env.AI_CHEAP_MODEL ?? 'gemini-2.5-flash-lite',
     embedModel: process.env.AI_EMBED_MODEL ?? 'gemini-embedding-001',
     embedDims: Number(process.env.AI_EMBED_DIMS ?? 768),
     // When no key is set we run in mock mode: deterministic, offline, free.
     get mockMode() {
-      return !this.apiKey;
+      return this.apiKeys.length === 0;
     },
   },
 
