@@ -9,7 +9,7 @@
 To navigate the documentation, follow the sequential order:
 
 1. **Element 1: Authentication & User Accounts**: Covers user identity, register/login flows, secure token rotation, notification preferences, and account ban controls.
-2. **Element 2: Ask a Query & Forum Engine**: Details query submission quality gates (gibberish/spam/duplicate detection), the ticket-like forum answering loop, voting, bookmarks, and automated solution finalization.
+2. **Element 2: Ask a Query & Forum Engine**: Details query submission quality gates (gibberish/spam/unfinished-question/duplicate detection plus an optional "Refine with AI" pass), the ticket-like forum answering loop, voting, bookmarks, and automated solution finalization.
 3. **Element 3: Reputation, Badges & Moderation**: Explains the community points system, positive badge tiers, negative flags, expert-to-moderator applications, and admin-verified answers.
 4. **Element 4: FAQ Knowledge Base & AI Chatbot**: Discusses FAQ search, category accordions, promote-to-FAQ promotion, and the tiered grounded chatbot RAG pipeline.
 5. **Element 5: Admin Dashboard & Maintenance**: Explains admin control tabs, moderation queues, audit logs, rollback windows, and the 8 automated database background jobs.
