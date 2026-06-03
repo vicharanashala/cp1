@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { createQuery, checkGrammar } from '../api/queries.js';
+import { createQuery, refineWithAi } from '../api/queries.js';
 import { getTaxonomy } from '../api/taxonomy.js';
 
 // The built-in tag a user may pick when no curated tag fits.
@@ -25,7 +25,7 @@ export default function AskQuery() {
 
   // Quality-gate UX state.
   const [duplicates, setDuplicates] = useState(null); // [{ id, title, score }]
-  const [grammar, setGrammar] = useState(null); // { corrected, changes }
+  const [refined, setRefined] = useState(null); // { corrected, changes }
   const [checking, setChecking] = useState(false);
   const [originalBody, setOriginalBody] = useState(null); // preserved if corrected
 
@@ -53,15 +53,15 @@ export default function AskQuery() {
     );
   };
 
-  const runGrammarCheck = async () => {
+  const runRefine = async () => {
     if (!form.body.trim()) return;
     setChecking(true);
     setError(null);
     try {
-      const res = await checkGrammar(form.body);
-      setGrammar(res.has_changes ? res : { ...res, has_changes: false });
+      const res = await refineWithAi(form.body);
+      setRefined(res.has_changes ? res : { ...res, has_changes: false });
     } catch {
-      setError('Grammar check is unavailable right now.');
+      setError('AI refine is unavailable right now.');
     } finally {
       setChecking(false);
     }
@@ -69,8 +69,8 @@ export default function AskQuery() {
 
   const acceptCorrection = () => {
     setOriginalBody(form.body);
-    setForm((f) => ({ ...f, body: grammar.corrected }));
-    setGrammar(null);
+    setForm((f) => ({ ...f, body: refined.corrected }));
+    setRefined(null);
   };
 
   const submit = async (postAnyway = false) => {
@@ -102,6 +102,11 @@ export default function AskQuery() {
                 ? ' Your account has been suspended.'
                 : '';
         setError(`${data.error}${note} (strike ${data.details.spam_flag_count})`);
+      } else if (err.response?.status === 422 && data?.details?.incomplete) {
+        const why = data.details.reasons?.length
+          ? ` (${data.details.reasons.join('; ')})`
+          : '';
+        setError(`${data.error}${why}`);
       } else {
         setError(data?.error ?? 'Could not submit your question.');
       }
@@ -119,8 +124,9 @@ export default function AskQuery() {
     <div className="container narrow-wide">
       <h1>Raise a Query</h1>
       <p className="lead">
-        Your query runs through quality gates (gibberish detection, an optional grammar check,
-        and duplicate detection) so the knowledge base stays clean.
+        Your query runs through quality gates (gibberish, spam and unfinished-question
+        detection, plus duplicate detection) so the knowledge base stays clean. You can also
+        polish your draft with the optional “Refine with AI” pass.
       </p>
 
       <form onSubmit={onSubmit} className="form">
@@ -137,8 +143,8 @@ export default function AskQuery() {
         </label>
 
         <div className="row">
-          <button type="button" className="btn-link" onClick={runGrammarCheck} disabled={checking}>
-            {checking ? 'Checking…' : 'Check grammar'}
+          <button type="button" className="btn-link" onClick={runRefine} disabled={checking}>
+            {checking ? 'Refining…' : 'Refine with AI'}
           </button>
           {originalBody && <span className="hint">Original text preserved.</span>}
         </div>
@@ -219,15 +225,15 @@ export default function AskQuery() {
         </button>
       </form>
 
-      {grammar && (
-        <Modal onClose={() => setGrammar(null)} title="Grammar suggestions">
-          {grammar.has_changes ? (
+      {refined && (
+        <Modal onClose={() => setRefined(null)} title="AI refinements">
+          {refined.has_changes ? (
             <>
               <p className="muted">Suggested revision:</p>
-              <pre className="diff">{grammar.corrected}</pre>
-              {grammar.changes?.length > 0 && (
+              <pre className="diff">{refined.corrected}</pre>
+              {refined.changes?.length > 0 && (
                 <ul className="changes">
-                  {grammar.changes.map((c, i) => (
+                  {refined.changes.map((c, i) => (
                     <li key={i}>{c.note ?? c.type}</li>
                   ))}
                 </ul>
@@ -236,7 +242,7 @@ export default function AskQuery() {
                 <button className="btn-primary" onClick={acceptCorrection}>
                   Accept all
                 </button>
-                <button className="btn-link" onClick={() => setGrammar(null)}>
+                <button className="btn-link" onClick={() => setRefined(null)}>
                   Keep original
                 </button>
               </div>
@@ -244,7 +250,7 @@ export default function AskQuery() {
           ) : (
             <>
               <p>No changes suggested - your text looks good.</p>
-              <button className="btn-link" onClick={() => setGrammar(null)}>
+              <button className="btn-link" onClick={() => setRefined(null)}>
                 Close
               </button>
             </>
