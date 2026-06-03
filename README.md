@@ -233,8 +233,6 @@ Built by the Curio team:
 | 11 | Tejash Burle | tejash.burle@gmail.com |
 | 12 | Sahitya Kumar | sahityakumar0063@gmail.com |
 
-_Also maintained in [`TEAM.md`](./TEAM.md)._
-
 ---
 
 ## License
