@@ -38,7 +38,7 @@ Every request follows a strict layered path: **Route → Controller → Service 
 
 - **Routes** define the HTTP method, path, and middleware chain. No business logic.
 - **Controllers** extract request parameters, call the right service, and send the response. They never touch models or boundaries directly.
-- **Services** contain all business logic — duplicate detection, gibberish checks, the RAG chatbot pipeline, solution marking. They talk to Mongoose models and the AI boundary.
+- **Services** contain all business logic — duplicate detection, gibberish checks, unfinished-question detection, the RAG chatbot pipeline, solution marking. They talk to Mongoose models and the AI boundary.
 - **Middleware** handles cross-cutting concerns: JWT verification, ban checks, rate limiting (three tiers: auth, AI, and general writes), file upload validation, and a central error handler.
 
 ### 4. The Centralised Config (`env.js` and `constants.js`)
