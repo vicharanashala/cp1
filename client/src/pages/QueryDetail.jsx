@@ -245,7 +245,7 @@ export default function QueryDetail() {
       </article>
 
       {query.was_auto_corrected && (
-        <p className="hint">This text was grammar-corrected by the author before posting.</p>
+        <p className="hint">This text was refined with AI by the author before posting.</p>
       )}
 
       {query.screenshots?.length > 0 && (
