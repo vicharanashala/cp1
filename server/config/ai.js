@@ -43,24 +43,6 @@ function isRateLimit(err) {
   return status === 429;
 }
 
-async function withBackoff(fn) {
-  let attempt = 0;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (isRateLimit(err) && attempt < MAX_RETRIES) {
-        const delay = BASE_DELAY_MS * 2 ** attempt + Math.random() * 200;
-        await sleep(delay);
-        attempt += 1;
-        continue;
-      }
-      throw err;
-    }
-  }
-}
-
 // Serialize live calls so the whole app shares one rate-limit budget.
 function enqueue(fn) {
   const run = queue.then(fn);
@@ -86,10 +68,26 @@ async function clientForKey(key) {
   return client;
 }
 
-// Run one live API call on the next key in the rotation, retrying on 429.
+// Run one live API call, retrying on 429. Each attempt picks the NEXT key in
+// the ring, so a rate-limited account is bypassed on the very next try instead
+// of being hammered through the backoff.
 async function liveCall(run) {
-  const client = await clientForKey(keyRing.next());
-  return withBackoff(() => run(client));
+  let attempt = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const client = await clientForKey(keyRing.next());
+    try {
+      return await run(client);
+    } catch (err) {
+      if (isRateLimit(err) && attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY_MS * 2 ** attempt + Math.random() * 200;
+        await sleep(delay);
+        attempt += 1;
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -97,6 +95,11 @@ async function liveCall(run) {
 export const ai = {
   get mockMode() {
     return config.ai.mockMode;
+  },
+
+  // How many provider keys are in rotation (0 = mock mode).
+  get keyCount() {
+    return keyRing.size;
   },
 
   /**
