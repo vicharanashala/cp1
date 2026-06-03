@@ -160,7 +160,7 @@ Admins get a dedicated dashboard and inline controls across the app — moderati
 - **Frontend:** React (Vite), React Router, Axios — a left-sidebar app shell in the "Frozen Precision" light design system (Inter type, glacial-blue palette), with Markdown-rendered threads and a personalized home dashboard.
 - **Backend:** Node.js, Express (REST + JWT with access/refresh rotation)
 - **Database:** MongoDB + Mongoose
-- **AI:** Google Gemini free tier via `@google/genai` (`gemini-2.5-flash` chat, `flash-lite` cheap checks, `gemini-embedding-001` @ 768 dims). Runs in deterministic **mock mode** offline when no key is set.
+- **AI:** Google Gemini free tier via `@google/genai` (`gemini-2.5-flash` chat, `flash-lite` cheap checks, `gemini-embedding-001` @ 768 dims). Runs in deterministic **mock mode** offline when no key is set. Multiple keys (`AI_API_KEYS`, comma-separated, from different accounts) are **rotated round-robin** to spread quota, and a rate-limited key is skipped on the next request.
 - **Vector search:** in-app cosine similarity over embeddings stored in MongoDB
 - **Scheduler:** `node-cron`
 - **Testing/CI:** Jest, Supertest, `mongodb-memory-server`, ESLint, GitHub Actions
