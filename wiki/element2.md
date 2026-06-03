@@ -1,6 +1,10 @@
 # Ask a Query & Forum Engine
 
-## Overview
+A structured community support system where users post questions, receive answers, participate in threaded discussions, vote and bookmark, and reach resolution — combining traditional forum mechanics with AI-assisted quality control, duplicate detection, and automated solution finalization.
+
+---
+
+## 1. Overview
 
 The Ask a Query & Forum Engine provides a structured community support system where users can post questions, receive answers, participate in threaded discussions, vote on content, bookmark useful queries, and finalize solutions. The module combines traditional forum functionality with AI-assisted quality control, duplicate detection, and automated solution resolution workflows.
 
@@ -8,76 +12,64 @@ The implementation is distributed across frontend pages (`AskQuery.jsx`, `QueryL
 
 Key capabilities include:
 
-* Structured query submission
-* Category and tag taxonomy enforcement
-* Screenshot attachments
-* AI-assisted grammar correction
-* Gibberish detection
-* Spam prevention and penalty escalation
-* Duplicate query detection using vector similarity
-* Hybrid keyword and semantic search
-* Answer management
-* Threaded comments
-* Voting and bookmarking
-* Helpful answer selection
-* Automated solution finalization
+- Structured query submission
+- Category and tag taxonomy enforcement
+- Screenshot attachments
+- AI-assisted grammar correction
+- Gibberish detection
+- Spam prevention and penalty escalation
+- Duplicate query detection using vector similarity
+- Hybrid keyword and semantic search
+- Answer management
+- Threaded comments
+- Voting and bookmarking
+- Helpful answer selection
+- Automated solution finalization
 
 ---
 
-# Architecture Overview
+## 2. Architecture Overview
 
-The Ask a Query module follows a layered architecture:
+The Ask a Query module follows a layered architecture. Frontend pages drive REST endpoints, which delegate to the service layer where validation, moderation, duplicate prevention, and lifecycle management are enforced.
 
-```text
-AskQuery.jsx
-    │
-    ▼
-POST /api/queries
-    │
-    ▼
-queryService.createQuery()
-    ├── Taxonomy Validation
-    ├── Gibberish Detection
-    ├── Spam Enforcement
-    ├── Embedding Generation
-    ├── Duplicate Detection
-    └── Query Storage
+```mermaid
+flowchart TD
+    subgraph FE[Frontend]
+        A[AskQuery.jsx]
+        L[QueryList.jsx]
+        D[QueryDetail.jsx]
+    end
 
-QueryList.jsx
-    │
-    ▼
-queryService.listQueries()
-    ├── Filtering
-    ├── Search
-    ├── Pagination
-    └── Answer Count Aggregation
+    A -->|POST /api/queries| CQ[queryService.createQuery]
+    CQ --> CQ1[Taxonomy Validation]
+    CQ --> CQ2[Gibberish Detection]
+    CQ --> CQ3[Spam Enforcement]
+    CQ --> CQ4[Embedding Generation]
+    CQ --> CQ5[Duplicate Detection]
+    CQ --> CQ6[Query Storage]
 
-QueryDetail.jsx
-    │
-    ├── Query Voting
-    ├── Query Bookmarking
-    ├── Answer Creation
-    ├── Helpful Marking
-    ├── Comment Management
-    └── Resolution Workflow
+    L -->|GET /api/queries| LQ[queryService.listQueries]
+    LQ --> LQ1[Filtering]
+    LQ --> LQ2[Search]
+    LQ --> LQ3[Pagination]
+    LQ --> LQ4[Answer Count Aggregation]
 
-solutionService
-    │
-    ▼
-Automatic Finalization
+    D --> DV[Query Voting]
+    D --> DB[Query Bookmarking]
+    D --> DA[Answer Creation]
+    D --> DH[Helpful Marking]
+    D --> DC[Comment Management]
+    D --> DR[Resolution Workflow]
+    DR --> SOL[solutionService → Automatic Finalization]
 ```
 
-The backend services collaborate to enforce validation, moderation, duplicate prevention, and lifecycle management throughout the query resolution process.
-
 ---
 
-# Question Posting Workflow
+## 3. Question Posting Workflow
 
-## Query Submission Interface
+### A. Query Submission Interface
 
-The query creation interface is implemented in `AskQuery.jsx`.
-
-Users are required to provide:
+The query creation interface is implemented in `AskQuery.jsx`. Users are required to provide:
 
 | Field         | Required |
 | ------------- | -------- |
@@ -91,9 +83,7 @@ Users are required to provide:
 
 Anonymous posting is not supported. Any anonymous flag is ignored and forced to `false` on the server.
 
----
-
-## Category Selection
+### B. Category Selection
 
 Categories are loaded dynamically:
 
@@ -101,13 +91,9 @@ Categories are loaded dynamically:
 GET /api/taxonomy?kind=category
 ```
 
-The user must select a category from the administrator-maintained taxonomy list.
+The user must select a category from the administrator-maintained taxonomy list. No free-form categories are accepted.
 
-No free-form categories are accepted.
-
----
-
-## Tag Selection
+### C. Tag Selection
 
 Tags are loaded dynamically:
 
@@ -115,13 +101,9 @@ Tags are loaded dynamically:
 GET /api/taxonomy?kind=tag
 ```
 
-Tags are selected through predefined checkboxes.
+Tags are selected through predefined checkboxes. Custom user-generated tags are not permitted.
 
-Custom user-generated tags are not permitted.
-
----
-
-## Attachment Support
+### D. Attachment Support
 
 The query form supports multiple image uploads.
 
@@ -133,19 +115,9 @@ The query form supports multiple image uploads.
 />
 ```
 
-Attachments are submitted using:
+Attachments are submitted using `multipart/form-data`. Uploaded attachments are displayed within the interface using a lightbox viewer. The query detail page allows users to view attachment counts and open images in a zoomable preview.
 
-```text
-multipart/form-data
-```
-
-Uploaded attachments are displayed within the interface using a lightbox viewer.
-
-The query detail page allows users to view attachment counts and open images in a zoomable preview.
-
----
-
-## Grammar Correction Workflow
+### E. Grammar Correction Workflow
 
 Before submitting a query, users may optionally perform grammar correction.
 
@@ -162,34 +134,11 @@ The API returns:
 }
 ```
 
-A diff modal presents the proposed corrections.
+A diff modal presents the proposed corrections. The user may **accept all changes** or **keep the original content**. When corrections are accepted, both corrected content and original content are submitted.
 
-The user may:
+### F. Query Creation Pipeline
 
-* Accept all changes
-* Keep the original content
-
-When corrections are accepted, both corrected content and original content are submitted.
-
----
-
-## Query Creation Pipeline
-
-Query creation is performed through:
-
-```http
-POST /api/queries
-```
-
-Backend execution sequence:
-
-```text
-queryController.createQuery()
-    ↓
-queryService.createQuery()
-```
-
-The service performs the following operations:
+Query creation is performed through `POST /api/queries`, routed as `queryController.createQuery()` → `queryService.createQuery()`. The service performs the following operations in order:
 
 1. Input coercion
 2. Taxonomy validation
@@ -204,99 +153,47 @@ The service performs the following operations:
 
 ---
 
-# Taxonomy Management
+## 4. Taxonomy Management
 
-The platform uses a controlled taxonomy model.
+The platform uses a controlled taxonomy model. Categories and tags are validated against records stored in the taxonomy collection. Validation occurs during:
 
-Categories and tags are validated against records stored in the taxonomy collection.
+- Query creation
+- Query update
+- Moderator re-categorization
 
-Validation occurs during:
-
-* Query creation
-* Query update
-* Moderator re-categorization
-
-Invalid values immediately generate validation failures.
-
-Example validation:
+Invalid values immediately generate validation failures. Example validation:
 
 ```text
-Taxonomy.findOne({
-  kind,
-  name
-})
+Taxonomy.findOne({ kind, name })
 ```
 
 Only administrator-approved taxonomy values may be used.
 
 ---
 
-# Gibberish Detection Pipeline
+## 5. Gibberish Detection Pipeline
 
 The system implements a two-layer content quality gate.
 
----
+### A. Layer 1 — Heuristic Validation
 
-## Layer 1: Heuristic Validation
+Every submitted query body passes through heuristic analysis. Checks include:
 
-Every submitted query body passes through heuristic analysis.
+- **Minimum length** — very short submissions are rejected immediately.
+- **Repeated character detection** — e.g. `aaaaaaaaaaaa` or `!!!!!!!!!!!!`. The service calculates a repeated-character ratio and rejects excessive repetition.
+- **Dictionary word ratio** — the service evaluates `recognized_words / total_words`; a low ratio indicates nonsensical content.
 
-Checks include:
+### B. Layer 1 Outcomes
 
-### Minimum Length
+| Outcome | Result |
+|---|---|
+| **Pass** | Content is considered valid. |
+| **Fail** | Content is immediately rejected. |
+| **Borderline** | Content is escalated to Layer 2 AI analysis. |
 
-Very short submissions are rejected immediately.
+### C. Layer 2 — AI Evaluation
 
-### Repeated Character Detection
-
-Examples:
-
-```text
-aaaaaaaaaaaa
-!!!!!!!!!!!!
-```
-
-The service calculates a repeated-character ratio and rejects excessive repetition.
-
-### Dictionary Word Ratio
-
-The service evaluates:
-
-```text
-recognized_words / total_words
-```
-
-A low ratio indicates nonsensical content.
-
----
-
-## Layer 1 Outcomes
-
-### Pass
-
-Content is considered valid.
-
-### Fail
-
-Content is immediately rejected.
-
-### Borderline
-
-Content is escalated to Layer 2 AI analysis.
-
----
-
-## Layer 2: AI Evaluation
-
-Borderline content triggers AI-based validation.
-
-The service calls:
-
-```text
-ai.js cheapCall()
-```
-
-Expected response:
+Borderline content triggers AI-based validation via `ai.js cheapCall()`. Expected response:
 
 ```json
 {
@@ -308,37 +205,17 @@ Expected response:
 
 The AI determines whether the content appears meaningful.
 
----
+### D. Fail-Open Strategy
 
-## Fail-Open Strategy
-
-If the AI service:
-
-* Returns HTTP 429
-* Times out
-* Encounters an error
-
-The submission is treated as valid.
-
-This prevents legitimate users from being blocked during AI quota exhaustion.
+If the AI service returns HTTP 429, times out, or encounters an error, the submission is treated as valid. This prevents legitimate users from being blocked during AI quota exhaustion.
 
 ---
 
-# Spam Prevention & Penalty System
+## 6. Spam Prevention & Penalty System
 
-Spam enforcement is handled by `spamService.js`.
+Spam enforcement is handled by `spamService.js`. A user's spam history is tracked through `user.spamflagcount`. Spam flags are generated when gibberish detection fails.
 
-A user's spam history is tracked through:
-
-```text
-user.spamflagcount
-```
-
-Spam flags are generated when gibberish detection fails.
-
----
-
-## Penalty Escalation Levels
+### A. Penalty Escalation Levels
 
 | Offense Count | Action                                         |
 | ------------- | ---------------------------------------------- |
@@ -347,80 +224,40 @@ Spam flags are generated when gibberish detection fails.
 | 5             | Restricted badge + moderator approval required |
 | 10            | Permanent suspension                           |
 
----
+### B. Enforcement Flow
 
-## Enforcement Flow
-
-```text
-gibberishService.check()
-       │
-       ├── Pass
-       │     ↓
-       │   Continue
-       │
-       └── Fail
-             ↓
-     Increment spamflagcount
-             ↓
-     spamService.applySpamPenalty()
+```mermaid
+flowchart TD
+    Check[gibberishService.check] -->|Pass| Continue[Continue: persist query]
+    Check -->|Fail| Inc[Increment spamflagcount]
+    Inc --> Apply[spamService.applySpamPenalty]
+    Apply --> Persist[Persist penalty to user record + notify]
 ```
 
 Each penalty update is persisted to the user record and generates appropriate notifications.
 
 ---
 
-# Duplicate Detection & Vector Search
+## 7. Duplicate Detection & Vector Search
 
 The platform uses embedding-based similarity detection to identify duplicate questions.
 
-## Embedding Generation
+### A. Embedding Generation
 
-After content validation:
+After content validation, `ai.js.embed(title + body)` generates an embedding vector stored with the query. The embedding becomes the basis for semantic search and duplicate detection.
 
-```text
-ai.js.embed(title + body)
-```
+### B. Similarity Search
 
-An embedding vector is generated and stored with the query.
-
-The embedding becomes the basis for semantic search and duplicate detection.
-
----
-
-## Similarity Search
-
-Generated embeddings are compared against existing queries using:
-
-```text
-vectorService.findSimilarQueries()
-```
-
-The service:
+Generated embeddings are compared against existing queries using `vectorService.findSimilarQueries()`, which:
 
 1. Loads stored query embeddings
-2. Computes cosine similarity
+2. Computes cosine similarity (`computeCosineSimilarity()`)
 3. Filters by threshold
 4. Returns ranked matches
 
-Similarity calculations are performed using:
+### C. Duplicate Detection Logic
 
-```text
-computeCosineSimilarity()
-```
-
----
-
-## Duplicate Detection Logic
-
-When similarity exceeds the configured threshold:
-
-```text
-similarity > 0.80
-```
-
-the query is marked as a potential duplicate.
-
-Query fields updated:
+When similarity exceeds the configured threshold (`similarity > 0.80`), the query is marked as a potential duplicate. Query fields updated:
 
 ```text
 isflaggedduplicate
@@ -430,199 +267,85 @@ similarityscore
 
 A moderation record is also created.
 
-# Query Discovery & Search
+---
+
+## 8. Query Discovery & Search
 
 The query discovery system enables users to browse, search, and filter community questions through the `QueryList.jsx` interface and the query service layer.
 
-## Query Listing
+### A. Query Listing
 
-Queries are retrieved through:
+Queries are retrieved through `GET /api/queries`. The backend supports status filtering, category filtering, tag filtering, pagination, full-text search, and resolved-last ordering. All filter values received through request parameters are coerced to strings before entering MongoDB filters to prevent malformed query injection.
 
-```http
-GET /api/queries
-```
-
-The backend supports:
-
-* Status filtering
-* Category filtering
-* Tag filtering
-* Pagination
-* Full-text search
-* Resolved-last ordering
-
-All filter values received through request parameters are coerced to strings before entering MongoDB filters to prevent malformed query injection.
-
----
-
-## Search Functionality
+### B. Search Functionality
 
 The platform supports two search mechanisms:
 
-### Full-Text Search
+- **Full-text search** — MongoDB text indexes for keyword-based searching: `GET /api/queries?q=<search-term>`.
+- **Semantic search** — embedding-based similarity search: `GET /api/queries/search`. Uses stored embeddings and cosine similarity to locate conceptually similar queries even when exact keywords differ.
 
-MongoDB text indexes are used for keyword-based searching.
+### C. Pagination
 
-```http
-GET /api/queries?q=<search-term>
-```
+Query listings support page-based navigation. Returned metadata includes `page`, `limit`, and `total`. The frontend renders navigation controls using these values.
 
-### Semantic Search
+### D. Query Ordering
 
-The search service also performs embedding-based similarity search.
-
-```http
-GET /api/queries/search
-```
-
-Semantic search uses stored embeddings and cosine similarity calculations to locate conceptually similar queries even when exact keywords differ.
+Resolved queries are intentionally pushed toward the bottom of search results (newest queries top, resolved queries bottom). This ensures active discussions remain visible.
 
 ---
 
-## Pagination
-
-Query listings support page-based navigation.
-
-Returned metadata includes:
-
-* page
-* limit
-* total
-
-The frontend renders navigation controls using these values.
-
----
-
-## Query Ordering
-
-Resolved queries are intentionally pushed toward the bottom of search results.
-
-Sorting behavior:
-
-```text
-Resolved Queries → Bottom
-Newest Queries → Top
-```
-
-This ensures active discussions remain visible.
-
----
-
-# Answers & Threaded Comments
+## 9. Answers & Threaded Comments
 
 Answer management is implemented through `answerService.js` and rendered through `QueryDetail.jsx`.
 
-## Answer Creation
+### A. Answer Creation
 
-Answers are submitted through:
+Answers are submitted through `POST /api/queries/:id/answers`. Validation rules:
 
-```http
-POST /api/queries/:id/answers
-```
+- User must not be banned.
+- Query author cannot answer their own question.
+- Query status must be Open or Answered.
+- Resolved or Archived queries cannot receive new answers.
 
-Validation rules:
+When an answer is successfully created: the answer document is saved, the query status changes from Open to Answered, and the query author receives a notification.
 
-* User must not be banned.
-* Query author cannot answer their own question.
-* Query status must be Open or Answered.
-* Resolved or Archived queries cannot receive new answers.
+### B. Answer Editing
 
-When an answer is successfully created:
+Answers may be edited only within a 15-minute window, by the answer author, a moderator, or an administrator. The original answer body is preserved when modifications occur.
 
-1. Answer document is saved.
-2. Query status changes from Open to Answered.
-3. Query author receives a notification.
+### C. Answer Deletion
 
----
+The platform uses soft deletion. Deleted answers receive `isdeleted`, `deletedat`, and `deletedby`. Status reconciliation is automatically performed:
 
-## Answer Editing
+- Removing an accepted answer clears the accepted answer reference.
+- Queries never remain resolved without a valid accepted answer.
+- If all answers are removed, the query returns to Open status.
 
-Answers may be edited only within a 15-minute window.
+### D. Threaded Comments — Permissions
 
-Conditions:
+Comments provide limited discussion under answers. Only two users may participate: the **query author** and the **answer author**. Any other user receives an authorization error.
 
-* User is the answer author.
-* User is a moderator.
-* User is an administrator.
-
-The original answer body is preserved when modifications occur.
-
----
-
-## Answer Deletion
-
-The platform uses soft deletion.
-
-Deleted answers receive:
-
-```text
-isdeleted
-deletedat
-deletedby
-```
-
-Status reconciliation is automatically performed.
-
-Examples:
-
-* Removing an accepted answer clears the accepted answer reference.
-* Queries never remain resolved without a valid accepted answer.
-* If all answers are removed, the query returns to Open status.
-
----
-
-## Threaded Comments
-
-Comments provide limited discussion under answers.
-
-### Permissions
-
-Only two users may participate:
-
-* Query author
-* Answer author
-
-Any other user receives an authorization error.
-
----
-
-## Comment Creation
+### E. Comment Creation
 
 ```http
 POST /api/answers/:id/comments
 ```
 
-Workflow:
+Workflow: permission validation → comment creation → notification sent to the other participant.
 
-1. Permission validation.
-2. Comment creation.
-3. Notification sent to the other participant.
+### F. Comment Deletion
 
----
-
-## Comment Deletion
-
-Comments use soft deletion and may be removed by:
-
-* Comment author
-* Moderator
-* Administrator
+Comments use soft deletion and may be removed by the comment author, a moderator, or an administrator.
 
 ---
 
-# Helpful Answer & Resolution Workflow
+## 10. Helpful Answer & Resolution Workflow
 
 The platform follows a support-ticket-style resolution model.
 
-## Mark Helpful
+### A. Mark Helpful
 
-Authorized users:
-
-* Query author
-* Moderator
-* Administrator
-
-Endpoint:
+Authorized users (query author, moderator, or administrator) call:
 
 ```http
 POST /api/queries/:id/answers/:answerId/helpful
@@ -637,175 +360,81 @@ Actions performed:
 5. Answer author awarded reputation points.
 6. Notification generated.
 
----
+### B. Accepted Answer Display
 
-## Accepted Answer Display
+Accepted answers appear with a `✓ Solution` marker and are always prioritized in thread ordering.
 
-Accepted answers appear with:
+### C. Unmark Helpful
 
-```text
-✓ Solution
-```
-
-Accepted answers are always prioritized in thread ordering.
+Authorized users may reopen discussions: remove the accepted answer association, clear the acceptance flag, and change query status back to Answered. Previously awarded points remain unchanged.
 
 ---
 
-## Unmark Helpful
-
-Authorized users may reopen discussions.
-
-Actions:
-
-1. Remove accepted answer association.
-2. Clear acceptance flag.
-3. Change query status back to Answered.
-
-Previously awarded points remain unchanged.
-
----
-
-# Voting & Bookmarking
+## 11. Voting & Bookmarking
 
 The platform supports voting on both queries and answers.
 
----
-
-## Query Voting
-
-Endpoint:
+### A. Query Voting
 
 ```http
 POST /api/queries/:id/vote
 ```
 
-Features:
+Supports upvote, downvote, and self-vote prevention. Votes are stored separately and aggregated into a query vote score.
 
-* Upvote
-* Downvote
-* Self-vote prevention
-
-Votes are stored separately and aggregated into a query vote score.
-
----
-
-## Answer Voting
-
-Endpoint:
+### B. Answer Voting
 
 ```http
 POST /api/answers/:id/vote
 ```
 
-Answer votes use signed values:
+Answer votes use signed values (`+1` = upvote, `-1` = downvote). Self-voting is blocked. Only positive votes contribute to reputation; downvotes are recorded but do not reduce reputation.
 
-```text
-+1 = Upvote
--1 = Downvote
-```
+### C. Bookmarking
 
-Rules:
-
-* Self-voting is blocked.
-* Only positive votes contribute to reputation.
-* Downvotes are recorded but do not reduce reputation.
-
----
-
-## Bookmarking
-
-Users can save useful queries.
-
-Endpoints:
+Users can save useful queries:
 
 ```http
-POST /api/queries/:id/save
+POST   /api/queries/:id/save
 DELETE /api/queries/:id/save
+GET    /api/queries/bookmarks
 ```
 
 Bookmarks are stored using a dedicated bookmark model.
 
-Saved queries are accessible through:
-
-```http
-GET /api/queries/bookmarks
-```
-
 ---
 
-# Solution Finalization Engine
+## 12. Solution Finalization Engine
 
 Automated solution resolution is implemented in `solutionService.js`.
 
-## Finalization Trigger
+### A. Finalization Trigger
 
-The engine runs:
+The engine runs daily through cron scheduling and can be triggered manually through an administrative endpoint.
 
-* Daily through cron scheduling.
-* Manually through an administrative endpoint.
+### B. Eligibility Rules
 
----
+Queries become eligible when `Status = Answered` and `Age > 48 Hours`.
 
-## Eligibility Rules
+### C. Manual Resolution Path
 
-Queries become eligible when:
+If a query already contains an accepted answer: the accepted answer is retained, high-quality answers are retained, excess answers are pruned, the query is marked Resolved, and reputation is awarded.
 
-```text
-Status = Answered
-Age > 48 Hours
-```
+### D. Automatic Resolution Path
 
----
+If no accepted answer exists after 48 hours: the highest-voted answer is selected and marked accepted, the query is resolved automatically, and no reputation is awarded.
 
-## Manual Resolution Path
+### E. Answer Pruning
 
-If a query already contains an accepted answer:
+To keep resolved discussions concise, accepted and high-value answers are retained and the remainder may be soft-deleted. A maximum of three answers are preserved.
 
-1. Accepted answer retained.
-2. High-quality answers retained.
-3. Excess answers pruned.
-4. Query marked Resolved.
-5. Reputation awarded.
+### F. Audit Logging
+
+Every finalization event creates an audit record containing the query identifier, resolution action, timestamp, and system activity metadata.
 
 ---
 
-## Automatic Resolution Path
-
-If no accepted answer exists after 48 hours:
-
-1. Highest-voted answer selected.
-2. Answer marked accepted.
-3. Query resolved automatically.
-4. No reputation awarded.
-
----
-
-## Answer Pruning
-
-To keep resolved discussions concise:
-
-* Accepted answers are retained.
-* High-value answers are retained.
-* Remaining answers may be soft-deleted.
-
-A maximum of three answers are preserved.
-
----
-
-## Audit Logging
-
-Every finalization event creates an audit record.
-
-Stored information includes:
-
-* Query identifier
-* Resolution action
-* Timestamp
-* System activity metadata
-
----
-
-# Frontend Responsibilities
+## 13. Frontend Responsibilities
 
 | Component       | Responsibility                                                                 |
 | --------------- | ------------------------------------------------------------------------------ |
@@ -815,7 +444,7 @@ Stored information includes:
 
 ---
 
-# Service Layer Responsibilities
+## 14. Service Layer Responsibilities
 
 | Service          | Responsibility                                                        |
 | ---------------- | --------------------------------------------------------------------- |
@@ -828,7 +457,7 @@ Stored information includes:
 
 ---
 
-# API Summary
+## 15. API Summary
 
 | Method | Endpoint                                   | Purpose             |
 | ------ | ------------------------------------------ | ------------------- |
@@ -847,7 +476,7 @@ Stored information includes:
 
 ---
 
-# End-to-End Workflow
+## 16. End-to-End Workflow
 
 1. User opens AskQuery page.
 2. Categories and tags are loaded from taxonomy endpoints.
@@ -868,6 +497,6 @@ Stored information includes:
 
 ---
 
-# Conclusion
+## 17. Conclusion
 
 The Ask a Query & Forum Engine combines structured query submission, taxonomy-based organization, AI-assisted content validation, semantic duplicate detection, community-driven answering, voting, bookmarking, and automated solution finalization. The module ensures that discussions remain searchable, moderated, and resolution-oriented while maintaining data integrity through validation, soft deletion, audit logging, and controlled workflow transitions.
