@@ -212,6 +212,17 @@ export async function listQueries(opts = {}, viewerId) {
   if (status) filter.status = status;
   if (q) filter.$text = { $search: q };
 
+  // "My" forum filter: questions the viewer asked, or ones they've answered.
+  const mine = str(opts.mine);
+  if (viewerId && mine === 'asked') {
+    filter.author_id = viewerId;
+  } else if (viewerId && mine === 'answered') {
+    const answeredQueryIds = await Answer.find({ author_id: viewerId, is_deleted: false }).distinct(
+      'query_id',
+    );
+    filter._id = { $in: answeredQueryIds };
+  }
+
   const limit = Math.min(Number(opts.limit) || 20, 50);
   const page = Math.max(Number(opts.page) || 1, 1);
 

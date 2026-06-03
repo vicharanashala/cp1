@@ -19,6 +19,13 @@ const STATUS_OPTIONS = [
   { value: 'archived', label: 'Archived' },
 ];
 
+// "My" filter: limit the forum to questions the viewer asked or answered.
+const MINE_OPTIONS = [
+  { value: '', label: 'Everyone' },
+  { value: 'asked', label: 'My Questions' },
+  { value: 'answered', label: 'My Answers' },
+];
+
 function excerpt(text = '', n = 180) {
   const t = String(text).replace(/\s+/g, ' ').trim();
   return t.length > n ? `${t.slice(0, n)}…` : t;
@@ -46,6 +53,7 @@ export default function QueryList() {
   const category = params.get('category') ?? '';
   const tag = params.get('tag') ?? '';
   const status = params.get('status') ?? '';
+  const mine = params.get('mine') ?? '';
   const page = Number(params.get('page')) || 1;
 
   // Local form state, synced from the URL (the URL is the source of truth).
@@ -60,6 +68,7 @@ export default function QueryList() {
     if (category) opts.category = category;
     if (tag) opts.tag = tag;
     if (status) opts.status = status;
+    if (mine) opts.mine = mine;
     if (page > 1) opts.page = page;
     listQueries(opts)
       .then((d) => active && setData(d))
@@ -67,7 +76,7 @@ export default function QueryList() {
     return () => {
       active = false;
     };
-  }, [q, category, tag, status, page]);
+  }, [q, category, tag, status, mine, page]);
 
   // Write filter changes to the URL (resetting to page 1 unless paging).
   const commit = (changes) => {
@@ -97,7 +106,7 @@ export default function QueryList() {
   const onClear = () => setParams(new URLSearchParams());
 
   const totalPages = Math.max(1, Math.ceil(data.total / (data.limit || 20)));
-  const hasFilters = q || category || tag || status;
+  const hasFilters = q || category || tag || status || mine;
 
   return (
     <div className="container">
@@ -153,6 +162,20 @@ export default function QueryList() {
             </option>
           ))}
         </select>
+        {user && (
+          <select
+            className="filter-select"
+            value={mine}
+            onChange={(e) => commit({ mine: e.target.value })}
+            title="Show only your questions or answers"
+          >
+            {MINE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        )}
         {hasFilters && (
           <button type="button" className="btn-ghost" onClick={onClear}>
             Clear
