@@ -69,7 +69,7 @@ export default function AdminModerators() {
                     <span className="badge">moderator</span>
                   )}
                 </td>
-                <td>{m.points}</td>
+                <td>{m.is_admin ? <span className="muted small">—</span> : m.points}</td>
                 <td>
                   {m.is_admin ? (
                     <span className="muted small">-</span>

@@ -1,6 +1,6 @@
 import { User } from '../models/User.js';
 import { notify } from './notificationService.js';
-import { POSITIVE_BADGES, NOTIFICATION_TYPE } from '../config/constants.js';
+import { POSITIVE_BADGES, NOTIFICATION_TYPE, ROLES } from '../config/constants.js';
 
 /** Positive badge keys earned at a given points total. */
 export function earnedBadgeKeys(points) {
@@ -61,6 +61,8 @@ export async function awardPoints(userId, delta) {
   if (!userId || !delta) return null;
   const user = await User.findById(userId);
   if (!user) return null;
+  // Admins are exempt from the reputation system — they never earn points/badges.
+  if (user.role === ROLES.ADMIN) return user;
 
   user.points = Math.max(0, (user.points ?? 0) + delta);
   const newly = applyBadges(user);
@@ -92,11 +94,16 @@ export async function awardPoints(userId, delta) {
 
 /** Resync positive badges for every user (used by the M7 daily recalc job). */
 export async function recalcAllBadges() {
-  const users = await User.find({ is_deleted: false }).select('points badges');
+  const users = await User.find({ is_deleted: false }).select('points badges role');
   let updated = 0;
   for (const user of users) {
     const before = JSON.stringify(user.badges ?? []);
-    applyBadges(user);
+    // Admins carry no reputation — keep their badge list empty.
+    if (user.role === ROLES.ADMIN) {
+      user.badges = [];
+    } else {
+      applyBadges(user);
+    }
     if (JSON.stringify(user.badges) !== before) {
       await user.save();
       updated += 1;

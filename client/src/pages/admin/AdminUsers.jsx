@@ -78,7 +78,7 @@ export default function AdminUsers() {
                   <span className="muted small">-</span>
                 )}
               </td>
-              <td>{u.points}</td>
+              <td>{u.role === 'admin' ? <span className="muted small">—</span> : u.points}</td>
               <td>{u.is_banned ? <span className="badge flag">banned</span> : 'active'}</td>
               <td>
                 {String(u.id) === String(user?.id) ? (
