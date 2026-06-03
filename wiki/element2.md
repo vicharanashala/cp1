@@ -10,7 +10,7 @@ Here is a simple, feature-first guide to how asking, answering, and resolving wo
 
 ## What Makes Curio Unique?
 
-1. **Quality Gates at the Front Door**: Before a question ever reaches the community, Curio checks it for gibberish, spam, and duplicates. Noise is stopped before it wastes anyone's time.
+1. **Quality Gates at the Front Door**: Before a question ever reaches the community, Curio checks it for gibberish, spam, unfinished questions, and duplicates. Noise — and half-typed posts — are stopped before they waste anyone's time.
 2. **A Support-Ticket Conversation**: Curio is not a free-for-all. A question is a focused conversation between the asker and the people helping them — there is no cross-talk, no peer bickering, just answers.
 3. **Always Attributed**: Anonymous posting is disabled. Every question and answer is tied to a real profile, which keeps the tone constructive and the quality high.
 4. **Self-Resolving Threads**: Questions don't rot in limbo. If no one is marked as the solution, Curio automatically finalizes the thread after a grace period and preserves the best answer.
@@ -27,11 +27,14 @@ Creating a question is guided, not freeform. Users provide a title, a descriptio
 ### 2. Curated Categories & Tags
 Users don't invent their own labels. They choose a category (like "Technical" or "Registration") and tags from an admin-curated list, with an "Others" option as a catch-all. This keeps the whole forum tidy and searchable instead of drowning in inconsistent, free-form tags.
 
-### 3. Optional Grammar Assist
-Before submitting, a user can run an optional grammar check. Curio suggests cleaner phrasing in a side-by-side preview, and the user decides whether to accept the polished version or keep their original wording. The meaning is never changed — only the clarity.
+### 3. Refine with AI
+Before submitting, a user can run an optional **"Refine with AI"** pass. Curio suggests cleaner phrasing in a side-by-side preview, and the user decides whether to accept the polished version or keep their original wording. The meaning is never changed — only the clarity. (With no AI key configured this falls back to a deterministic offline tidy, so it always does something useful.)
 
 ### 4. Noise & Gibberish Detection
-Every submission is checked for quality: it must be long enough, must not be random repeated characters, and must contain enough real words. Nonsense is rejected on the spot. Repeated offenders face an escalating spam ladder — starting with a warning, then a temporary ban, then post-approval restrictions, and finally a permanent suspension.
+Every submission is checked for quality: it must be long enough, must not be random repeated characters, and must contain enough real words. Nonsense is rejected on the spot — and the blocked attempt is **flagged to the moderation queue** so admins can spot repeat offenders. Those offenders face an escalating spam ladder — starting with a warning, then a temporary ban, then post-approval restrictions, and finally a permanent suspension.
+
+### 4b. Unfinished-Question Detection
+A post can be made of perfectly real words and still be unfinished — too short to act on, obvious placeholder text ("test", "help"), or a sentence that trails off mid-thought. Curio catches these and asks the user to finish the question before it reaches the community. Because this is an honest mistake rather than abuse, it is **not** counted as a spam strike — the user simply adds the missing detail and posts.
 
 ### 5. Smart Duplicate Detection
 When a question is posted, Curio compares its meaning against existing questions — not just the keywords. If a close match already exists, the user is shown the likely duplicate and can either jump straight to it or post anyway, in which case it's flagged for a moderator to review rather than silently blocked.
