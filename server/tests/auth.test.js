@@ -28,6 +28,7 @@ describe('health', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
     expect(res.body.ai).toBe('mock');
+    expect(res.body.ai_keys).toBe(0); // mock mode → no keys in rotation
   });
 });
 
