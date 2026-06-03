@@ -73,7 +73,7 @@ The platform operates on a clear hierarchical permissions system:
 
 ### 8. Admin-Issued Custom Badges
 Administrators can award custom badges to users to highlight specialized expertise or achievements (such as "Documentation Hero").
-- **Admin Verified Badge**: Automatically awarded to a user when an administrator marks one of their forum answers as authoritative. This badge remains pinned to their profile permanently.
+- **Admin Verified (on answers, not profiles)**: When an administrator marks a forum answer as authoritative, the **answer** is labelled ✅ Admin Verified and pinned to the top of its thread. This is a property of the answer itself — it is not a badge awarded to the answerer's profile.
 
 ### 9. Account Ban Controls
 When users violate community guidelines, administrators can lock their accounts.

@@ -43,7 +43,7 @@ Curio automatically awards badges as you accumulate points. Your badge appears n
 | **Expert** | You're one of the top knowledge holders. At this tier, Curio invites you to apply for moderator status. |
 | **Legend** | The highest honor. You have made an exceptional impact on the community's knowledge base. |
 
-The top badge you've earned is displayed prominently under your name everywhere in Curio — on questions, answers, and in the user directory.
+The top badge you've earned is displayed prominently under your name everywhere in Curio — on questions, answers, and in the user directory. **Admins are exempt from the reputation system entirely** — they neither earn nor display points or badges anywhere, since they moderate rather than compete for reputation.
 
 ### 3. The Expert-to-Moderator Path
 
@@ -51,7 +51,7 @@ Reaching the Expert tier unlocks more than just a badge. Curio automatically sen
 
 ### 4. Admin-Verified Answers
 
-Sometimes an answer is not just helpful — it's authoritative. Admins can mark any answer as "verified," which gives it a special badge and bumps it to the top of the answer list. Unlike other badges, the Verified badge is permanent — it stays on your profile even if the answer is later changed, ensuring your verified contributions are always recognized.
+Sometimes an answer is not just helpful — it's authoritative. Admins can mark any answer as "verified," which labels it **✅ Admin Verified** right under the answer and bumps it to the top of the answer list. Verification is a property of the **answer itself**, not a badge on the answerer's profile — so it shows where it matters (on the trusted answer) and the author's profile is never cluttered with it.
 
 ### 5. The Spam Defense System
 
@@ -88,7 +88,7 @@ Admins can **Resolve** a flag (confirm it and close the issue), **Dismiss** it (
 
 ### 8. The Attention Escalation Queue
 
-Sometimes a question needs an admin's eyes even though nothing is "wrong" with it. Expert-tier users and moderators can flag questions that need admin attention. These appear in a special queue grouped by category and sorted by urgency, showing the asker's details so admins can quickly assess and resolve the situation. Once handled, the flag is cleared with a single click.
+Sometimes a question needs an admin's eyes even though nothing is "wrong" with it. Expert-tier users and moderators can flag questions that need admin attention. These appear in a special queue **grouped by category**, then ordered by the asker's **joining date**, then the question's **posting date** — showing the asker's email and joining date so admins can work the list top to bottom. Once handled, the flag is cleared with a single click.
 
 ### 9. Moderator Powers
 

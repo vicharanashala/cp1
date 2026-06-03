@@ -31,9 +31,9 @@ Built as an open-source internship project with **zero paid infrastructure**: th
 |---|---|
 | **FAQ + AI Chatbot** | Category-organized FAQ with hybrid keyword + semantic search. Both the **search bar** and the **AI chatbot** answer from the FAQ first and **ask before checking the community forum** — if there's no FAQ match they prompt *"Not in the FAQ — do you want me to check the forum?"* and only search the forum (then redirect to the matching thread) once you say yes. |
 | **Ask a Query** | Structured intake with gibberish detection, opt-in grammar auto-correction, duplicate detection, **admin-curated categories/tags** (users pick from the list or "Others" — no free-form tagging), a required **joining date** and **contact email**, and screenshots. Posting is always attributed — **no anonymous posting**. |
-| **Q&A Forum** | A support-ticket model: any member answers (but **not on their own question**); only the poster — or a moderator/admin — rates/closes answers, and discussion stays poster ↔ answerer (no peer voting or cross-talk). Question voting, bookmarks, full-text + semantic **forum search**, and reporting included; resolved questions sink to the bottom of the list. |
-| **Solution Marking Engine** | The poster (or a moderator/admin) marks an answer "helpful" to close the thread; **admins can mark an answer "Admin Verified"**; resolved, high-value threads can be promoted into the canonical FAQ. |
-| **Reputation & Badges** | Points, tiered reputation badges (shown under each author's name in the forum), an **Admin Verified** badge, admin-awarded custom badges, and admin-issued moderation flags. |
+| **Q&A Forum** | A support-ticket model: any member answers (but **not on their own question**); only the poster — or a moderator/admin — rates/closes answers, and discussion stays poster ↔ answerer (no peer voting or cross-talk). Question voting, bookmarks, full-text + semantic **forum search**, a **My Questions / My Answers** filter, and reporting included; resolved questions sink to the bottom of the list. |
+| **Solution Marking Engine** | The poster (or a moderator/admin) marks an answer "helpful" to close the thread; **admins can mark an answer "Admin Verified"** (a label on the answer itself, not a user badge); resolved, high-value threads can be promoted into the canonical FAQ. |
+| **Reputation & Badges** | Points, tiered reputation badges (shown under each author's name in the forum), admin-awarded custom badges, and admin-issued moderation flags. **Admins carry no points or badges** — they moderate, they don't farm reputation. |
 | **Admin & Governance** | A telemetry dashboard, moderation queue, duplicate merge, a **moderators roster**, **15-minute rollback** of deletions, **admin-curated taxonomy**, bans/roles, full badge control, FAQ management (with a **duplicate guard**), and an audit log. |
 | **Automated Maintenance** | Scheduled jobs (LRU archival, staleness checks, orphan cleanup, soft-delete purge, badge recalc, embedding refresh) — each also triggerable from the admin panel. |
 
@@ -55,7 +55,7 @@ A query moves through a clear lifecycle, with quality gates at the front door so
 - Any logged-in member can post an **answer** (Markdown supported), flipping the question to **Answered** — **except the asker, who can't answer their own question**.
 - **Support-ticket interaction model — no user ↔ user cross-talk.** The forum is a conversation between a member and the **question poster**, not a free-for-all: only the **poster** (or a moderator/admin) can rate answers, and discussion under an answer is limited to the **poster and that answer's own author**. Other members can read and answer, but can't vote on or comment on each other's answers. (Questions themselves can still be up/down voted, bookmarked, and reported — reporting opens a short reason form.)
 - The poster (or a **moderator/admin**) marks the best answer **"User found helpful,"** which **closes the question for answers**, records it as the solution, and rewards the answerer; un-marking reopens the thread.
-- **Admin verification** — an admin can mark any answer **"Admin Verified."** Verified answers are pinned to the top of the thread and earn their author the persistent **Admin Verified** badge.
+- **Admin verification** — an admin can mark any answer **"Admin Verified."** Verification lives on the **answer itself**: verified answers are labelled **✅ Admin Verified** under the answer and pinned to the top of the thread. It is **not** a badge on the answerer's profile.
 - **Editing window** — authors can edit their own question or answer for **15 minutes** after posting; afterwards the content is locked.
 - **Escalation:** a member holding the **Expert** badge — or any **moderator** — can flag a question as **"Needs admin attention,"** routing it to the admin attention queue.
 - **Browsing & search** — the forum list keeps unanswered questions up top and **sinks resolved ones to the bottom**; questions are searchable (keyword + semantic). The knowledge-base search and the chatbot only reach into the forum **after the user opts in** (see *Finding answers* below) — the forum is never silently mixed into FAQ results.
@@ -106,10 +106,10 @@ Reputation is earned, not given — and it drives the badge system.
 | 🥇 **Expert** | 200 pts |
 | 🏆 **Legend** | 300 pts |
 
-Every profile shows the **full badge catalog** (earned vs. locked, with the points needed) plus a reputation tier and progress toward the next tier. The **highest badge a member holds is shown under their name** throughout the forum, so good contributors are visible where they contribute.
+Every profile shows the **full badge catalog** (earned vs. locked, with the points needed) plus a reputation tier and progress toward the next tier. The **highest badge a member holds is shown under their name** throughout the forum, so good contributors are visible where they contribute. **Admin accounts are exempt from the reputation system entirely** — they show no points and no badges anywhere (forum author chips, profiles, the home dashboard, and the topbar).
 
 **Admin-controlled badges** (see below) layer on top of the automatic ones:
-- **Admin Verified** ✅ — granted automatically to a member when an admin marks one of their answers "Admin Verified"; the badge is kept even if the answer is later unverified.
+- **Admin Verified** ✅ — a verification mark on an **answer** (shown under the answer and pinned to the top of the thread), applied when an admin marks the answer verified. It is a property of the answer, **not** a badge awarded to the answerer.
 - **Custom badges** — admins can *create and award* a free-form badge (name + icon + reason) and *revoke* it later.
 - **Moderation flags** — ⚠️ Warning, 🚫 Restricted, ☠️ Suspended — issued and revoked by admins to govern behavior. Restriction gates a user behind post-approval; suspension bans them.
 
@@ -125,7 +125,7 @@ Admins get a dedicated dashboard and inline controls across the app — moderati
 - **System overview** — live KPIs (users, open questions, resolution rate, moderation load, AI status).
 - **Needs Attention** — actionable cards (**questions escalated for admin attention**, flagged content, pending approvals, open questions) that deep-link straight to the work.
 - **Queries by Category** — central grouping of all technical queries by topic with open / answered / resolved counts and deep links.
-- **Attention queue** — questions escalated by Expert members/moderators, grouped by category; the queue lists each asker **by their email id** — click an email to open the question.
+- **Attention queue** — questions escalated by Expert members/moderators, **grouped by category** and ordered by the asker's **joining date**, then the question's **posting date**; the queue lists each asker **by their email id** (with their joining date) — click an email to open the question.
 - **Audit log** — every privileged action is recorded and reviewable.
 - **Quieter notifications** — admins don't get pinged for routine answer/like/comment activity (they moderate, not farm reputation).
 

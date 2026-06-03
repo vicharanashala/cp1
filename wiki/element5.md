@@ -31,6 +31,7 @@ Think of this as the main dashboard showing real-time stats. It displays:
 ### 2. The Expert Escalation Queue (Attention Tab)
 Sometimes, a standard user query gets stuck or requires official admin clearance.
 - When an experienced member (an "Expert") flags a question for attention, it routes here.
+- The queue is **grouped by category**, then ordered by the asker's **joining date**, then the question's **posting date**, so you can work the list top to bottom.
 - It shows the asker's email and joining date, letting you quickly review and resolve the issue.
 
 ### 3. The Flag Review (Moderation Tab)

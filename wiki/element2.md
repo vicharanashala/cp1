@@ -37,7 +37,7 @@ Every submission is checked for quality: it must be long enough, must not be ran
 When a question is posted, Curio compares its meaning against existing questions — not just the keywords. If a close match already exists, the user is shown the likely duplicate and can either jump straight to it or post anyway, in which case it's flagged for a moderator to review rather than silently blocked.
 
 ### 6. Powerful Search & Browsing
-Finding existing questions is effortless. Users can browse by status, category, and tags, or search two ways: classic keyword search, and semantic search that finds conceptually similar questions even when the wording is different. Resolved questions automatically sink to the bottom of the list, keeping active discussions front and center.
+Finding existing questions is effortless. Users can browse by status, category, and tags, or search two ways: classic keyword search, and semantic search that finds conceptually similar questions even when the wording is different. A logged-in member can also flip the forum to a personal view — **My Questions** (the ones they asked) or **My Answers** (the ones they've answered) — to quickly track their own threads. Resolved questions automatically sink to the bottom of the list, keeping active discussions front and center.
 
 ### 7. Answering a Question
 Any community member can answer an open question — with one important rule: **you cannot answer your own question.** The first answer flips the question from "Open" to "Answered" and notifies the asker. Banned users and closed threads cannot receive new answers, keeping the conversation clean and current.
