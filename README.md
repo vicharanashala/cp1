@@ -212,6 +212,12 @@ A scripted ~8-minute walkthrough lives in the **Demo loop checklist** at the bot
 
 ---
 
+## Team
+
+Built by the Curio team — see [`TEAM.md`](./TEAM.md) for the full roster.
+
+---
+
 ## License
 
 [MIT](./LICENSE) © 2026 vicharanashala
