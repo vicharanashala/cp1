@@ -54,8 +54,9 @@ export async function restoreQuery(id) {
   return data;
 }
 
-export async function checkGrammar(text) {
-  const { data } = await api.post('/queries/check-grammar', { text });
+// Refine the draft with AI: returns { original, corrected, changes, has_changes }.
+export async function refineWithAi(text) {
+  const { data } = await api.post('/queries/refine', { text });
   return data;
 }
 
