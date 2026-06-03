@@ -284,9 +284,9 @@ export async function queriesByCategory() {
 }
 
 /**
- * Questions an Expert has flagged as needing admin attention, sorted **by
- * category**, then by question posting date, then by the author's joining date
- * — the order the admin works the list in.
+ * Questions an Expert has flagged as needing admin attention, grouped **by
+ * category**, then ordered by the asker's joining date, then the question's
+ * posting date — the order the admin works the list in.
  */
 export async function listAttentionQueries() {
   const queries = await Query.find({ needs_attention: true, is_deleted: false })
@@ -294,11 +294,14 @@ export async function listAttentionQueries() {
     .populate('attention_flagged_by', 'name')
     .lean();
 
+  // Grouped by category, then ordered by the asker's joining date, then by the
+  // question's posting date — the order the admin works the list in.
   queries.sort(
     (a, b) =>
       (a.category || '').localeCompare(b.category || '') ||
-      new Date(a.createdAt) - new Date(b.createdAt) ||
-      new Date(a.author_id?.createdAt ?? 0) - new Date(b.author_id?.createdAt ?? 0),
+      new Date(a.joining_date ?? a.author_id?.createdAt ?? 0) -
+        new Date(b.joining_date ?? b.author_id?.createdAt ?? 0) ||
+      new Date(a.createdAt) - new Date(b.createdAt),
   );
 
   return queries.map((q) => ({

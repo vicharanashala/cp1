@@ -47,8 +47,9 @@ export default function AdminAttention() {
       <header className="overview-head">
         <h2>Needs Admin Attention</h2>
         <p className="muted">
-          Questions escalated by Expert members, grouped by category. The queue lists each asker by
-          their email id - click an email to open the question.
+          Questions escalated by Expert members, grouped by category and ordered by the asker's
+          joining date, then the question's posting date. Each asker is listed by their email id -
+          click an email to open the question.
         </p>
       </header>
 
@@ -67,7 +68,10 @@ export default function AdminAttention() {
                   <Link to={`/queries/${r.id}`} className="email-link">
                     {r.email ?? 'unknown@-'}
                   </Link>
-                  <span className="small muted">{relativeTime(r.posted_at)}</span>
+                  <span className="small muted">
+                    {r.joining_date ? `joined ${new Date(r.joining_date).toLocaleDateString()} · ` : ''}
+                    asked {relativeTime(r.posted_at)}
+                  </span>
                   <button className="btn-link" disabled={busy} onClick={() => resolve(r.id)}>
                     Mark handled
                   </button>
