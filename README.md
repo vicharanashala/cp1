@@ -8,7 +8,7 @@
 
 *Ask. Answer. Resolve. Promote. — the full knowledge lifecycle in one MERN platform.*
 
-**[📖 Read the full documentation on the Wiki →](https://github.com/vicharanashala/cp1/wiki)**
+**[Read the full documentation on the Wiki →](https://github.com/vicharanashala/cp1/wiki)**
 
 </div>
 
