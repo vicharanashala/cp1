@@ -1,6 +1,6 @@
 # FAQ Knowledge Base & AI Chatbot
 
-**Wiki page 4 — Scope:** Semantic FAQ search, category accordions, promote-Q&A-to-FAQ, the tiered grounded chatbot (FAQ → resolved queries → fallback), embeddings/cosine similarity, the swappable AI mock/live boundary.
+Semantic FAQ search, category accordions, promote-Q&A-to-FAQ, the tiered grounded chatbot (FAQ → resolved queries → fallback), embeddings/cosine similarity, and the swappable AI mock/live boundary.
 
 **Primary sources:** `server/services/faqService.js`, `server/services/chatbotService.js`, `server/services/vectorService.js`, `server/config/ai.js`, `client/src/pages/Faq.jsx`, `client/src/components/Chatbot.jsx`.
 
@@ -12,29 +12,29 @@
 2. [Data Model — FaqEntry](#2-data-model--faqentry)
 3. [Embeddings and Cosine Similarity](#3-embeddings-and-cosine-similarity)
 4. [FAQ Service](#4-faq-service)
-   - 4.1 [Listing FAQs — Category Grouping](#41-listing-faqs--category-grouping)
-   - 4.2 [Hybrid Semantic Search](#42-hybrid-semantic-search)
-   - 4.3 [Creating FAQ Entries](#43-creating-faq-entries)
-   - 4.4 [Updating and Soft-Deleting Entries](#44-updating-and-soft-deleting-entries)
-   - 4.5 [Promoting a Resolved Q&A to FAQ](#45-promoting-a-resolved-qa-to-faq)
+   - A. [Listing FAQs — Category Grouping](#a-listing-faqs--category-grouping)
+   - B. [Hybrid Semantic Search](#b-hybrid-semantic-search)
+   - C. [Creating FAQ Entries](#c-creating-faq-entries)
+   - D. [Updating and Soft-Deleting Entries](#d-updating-and-soft-deleting-entries)
+   - E. [Promoting a Resolved Q&A to FAQ](#e-promoting-a-resolved-qa-to-faq)
 5. [FAQ Routes and Access Control](#5-faq-routes-and-access-control)
 6. [FAQ Page — Frontend](#6-faq-page--frontend)
-   - 6.1 [Category Accordions](#61-category-accordions)
-   - 6.2 [Live Semantic Search](#62-live-semantic-search)
-   - 6.3 [Consent-Gated Forum Fallback](#63-consent-gated-forum-fallback)
+   - A. [Category Accordions](#a-category-accordions)
+   - B. [Live Semantic Search](#b-live-semantic-search)
+   - C. [Consent-Gated Forum Fallback](#c-consent-gated-forum-fallback)
 7. [Chatbot Service — Tiered Grounded RAG Pipeline](#7-chatbot-service--tiered-grounded-rag-pipeline)
-   - 7.1 [Tier 1 — Curated FAQ Answer](#71-tier-1--curated-faq-answer)
-   - 7.2 [Tier 2 — Consent and Resolved Community Q&A](#72-tier-2--consent-and-resolved-community-qa)
-   - 7.3 [Tier 3 — Graceful Fallback](#73-tier-3--graceful-fallback)
-   - 7.4 [Session Management](#74-session-management)
-   - 7.5 [Prompt Construction and Grounded Composition](#75-prompt-construction-and-grounded-composition)
+   - A. [Tier 1 — Curated FAQ Answer](#a-tier-1--curated-faq-answer)
+   - B. [Tier 2 — Consent and Resolved Community Q&A](#b-tier-2--consent-and-resolved-community-qa)
+   - C. [Tier 3 — Graceful Fallback](#c-tier-3--graceful-fallback)
+   - D. [Session Management](#d-session-management)
+   - E. [Prompt Construction and Grounded Composition](#e-prompt-construction-and-grounded-composition)
 8. [Chatbot Routes and Rate Limiting](#8-chatbot-routes-and-rate-limiting)
 9. [Chatbot Component — Frontend (Chatbot.jsx)](#9-chatbot-component--frontend-chatbotjsx)
 10. [The AI Module — Swappable Mock/Live Boundary](#10-the-ai-module--swappable-mocklive-boundary)
-    - 10.1 [Mock Mode](#101-mock-mode)
-    - 10.2 [Live Mode — Gemini via @google/genai](#102-live-mode--gemini-via-googlegenai)
-    - 10.3 [Request Queue and Exponential Backoff](#103-request-queue-and-exponential-backoff)
-    - 10.4 [Public API Surface](#104-public-api-surface)
+    - A. [Mock Mode](#a-mock-mode)
+    - B. [Live Mode — Gemini via @google/genai](#b-live-mode--gemini-via-googlegenai)
+    - C. [Request Queue and Exponential Backoff](#c-request-queue-and-exponential-backoff)
+    - D. [Public API Surface](#d-public-api-surface)
 11. [Key Thresholds and Constants](#11-key-thresholds-and-constants)
 12. [Embedding Refresh Job](#12-embedding-refresh-job)
 13. [End-to-End Flow Diagrams](#13-end-to-end-flow-diagrams)
@@ -120,7 +120,7 @@ Per the project constraints and architecture decisions (`PLANNING.md §3`), a de
 
 This is the authoritative service layer for all FAQ operations. No controller, route, or other service reaches into the `FaqEntry` model directly — all reads and writes go through these exported functions.
 
-### 4.1 Listing FAQs — Category Grouping
+### A. Listing FAQs — Category Grouping
 
 ```js
 export async function listFaqs({ category } = {})
@@ -137,7 +137,7 @@ Fetches all non-deleted entries, optionally filtered to a single category. The q
 
 This array is what the `Faq.jsx` page receives and renders as category accordion sections. The `category` query parameter uses `String(category)` coercion to prevent NoSQL operator injection before passing to the Mongoose filter.
 
-### 4.2 Hybrid Semantic Search
+### B. Hybrid Semantic Search
 
 ```js
 export async function searchFaqs(query)
@@ -153,7 +153,7 @@ Takes a user-supplied query string and returns up to 10 ranked FAQ entries. The 
 
 The search is stateless and public — no authentication is required.
 
-### 4.3 Creating FAQ Entries
+### C. Creating FAQ Entries
 
 ```js
 export async function createFaq({ category, question, answer, sort_order, source, sourceQueryId, force })
@@ -168,9 +168,9 @@ All three required fields (`category`, `question`, `answer`) are validated befor
 
 If either condition is met, a `409 Conflict` is thrown with a `duplicate: true` payload that includes the matching entry's `id`, `question`, and similarity `score`. The admin UI can surface this to the operator and offer a `force: true` override to create the entry anyway.
 
-Entries promoted from Q&A (`source === 'qa'`) bypass this guard intentionally — the promotion flow (see §4.5) has its own idempotency check.
+Entries promoted from Q&A (`source === 'qa'`) bypass this guard intentionally — the promotion flow (see [E](#e-promoting-a-resolved-qa-to-faq)) has its own idempotency check.
 
-### 4.4 Updating and Soft-Deleting Entries
+### D. Updating and Soft-Deleting Entries
 
 **`updateFaq(id, fields)`** — Applies partial updates to an entry. If the `question` or `answer` text changes, the embedding is automatically recomputed (`ai.embed(faqText(question, answer))`), keeping the vector in sync with the content. Changes to `category`, `sort_order`, and `is_outdated` never trigger re-embedding.
 
@@ -178,7 +178,7 @@ Entries promoted from Q&A (`source === 'qa'`) bypass this guard intentionally �
 
 **`deleteFaq(id)`** — Soft-deletes the entry by setting `is_deleted = true` and `deleted_at = now`. The record is retained in the database for audit purposes and is excluded from all `listFaqs` and `searchFaqs` results by the `{ is_deleted: false }` filter.
 
-### 4.5 Promoting a Resolved Q&A to FAQ
+### E. Promoting a Resolved Q&A to FAQ
 
 ```js
 export async function promoteQueryToFaq(queryId)
@@ -226,7 +226,7 @@ Public reads are unauthenticated by design. All write operations require a valid
 
 **File:** `client/src/pages/Faq.jsx`
 
-### 6.1 Category Accordions
+### A. Category Accordions
 
 On mount, the page calls `listFaqs()` via the `GET /api/faq` endpoint and stores the returned `groups` array in state. Each group becomes a collapsible category section:
 
@@ -237,7 +237,7 @@ On mount, the page calls `listFaqs()` via the `GET /api/faq` endpoint and stores
 
 **Promoted entries** are visually distinguished: `FaqItem` renders a `"Promoted from Q&A"` chip alongside the question text when `entry.source === 'qa'`.
 
-### 6.2 Live Semantic Search
+### B. Live Semantic Search
 
 When the user types in the search bar, a 300ms debounced effect fires `searchFaqs(term)` against `GET /api/faq/search?q=`. Results replace the accordion view entirely. A new search resets `forumResults` to `null` (meaning "never checked") so any prior forum opt-in is invalidated.
 
@@ -245,7 +245,7 @@ Clicking "Clear" calls `setResults(null)` and `setForumResults([])` (an empty ar
 
 The search hint explicitly tells the user that semantic search is active, encouraging natural-language queries ("how do I report data?") rather than just keyword lookups.
 
-### 6.3 Consent-Gated Forum Fallback
+### C. Consent-Gated Forum Fallback
 
 If the semantic search returns zero FAQ results, the page shows a consent prompt: **"Not in the FAQ. Do you want me to check in the forum?"** The community database is never queried until the user clicks "Yes, check the forum." This mirrors the chatbot's `await_forum` tier and ensures the platform never implicitly searches user-generated content.
 
@@ -261,18 +261,18 @@ The chatbot implements a **consent-gated three-tier RAG pipeline**: Tier 1 answe
 
 The key constant governing retrieval confidence is `CHATBOT_MATCH_THRESHOLD = 0.3` from `constants.js`. A retrieved document must exceed this cosine similarity score to be used as context.
 
-### 7.1 Tier 1 — Curated FAQ Answer
+### A. Tier 1 — Curated FAQ Answer
 
 On every new question (when `checkForum` is `false`), the service:
 
 1. Embeds the user's question via `ai.embed(text)`.
 2. Fetches all non-deleted `FaqEntry` documents, selecting only `question`, `answer`, and `embedding`.
 3. Finds the single best-scoring FAQ entry using `bestMatch()`, which scans the list computing `cosineSimilarity(qEmbed, doc.embedding)` for each entry.
-4. If `faqHit.score >= CHATBOT_MATCH_THRESHOLD`, the service calls `compose()` with a grounded prompt built from the FAQ entry's question and answer text (see §7.5). The response carries:
+4. If `faqHit.score >= CHATBOT_MATCH_THRESHOLD`, the service calls `compose()` with a grounded prompt built from the FAQ entry's question and answer text (see [E](#e-prompt-construction-and-grounded-composition)). The response carries:
    - `source_tier: 'faq'`
    - `citations: [{ kind: 'faq', ref_id: entry._id, title: entry.question }]`
 
-### 7.2 Tier 2 — Consent and Resolved Community Q&A
+### B. Tier 2 — Consent and Resolved Community Q&A
 
 If Tier 1 finds no confident FAQ match, the service does **not** silently fall through to the community database. Instead it returns:
 
@@ -297,7 +297,7 @@ When the user consents, the client re-calls `POST /api/chatbot/ask` with `check_
 
 The citation links directly to the forum thread (`/queries/:ref_id`), so the user can follow up in the community.
 
-### 7.3 Tier 3 — Graceful Fallback
+### C. Tier 3 — Graceful Fallback
 
 If Tier 2 also finds no match above the threshold, the service returns:
 
@@ -307,7 +307,7 @@ If Tier 2 also finds no match above the threshold, the service returns:
 
 with `source_tier: 'fallback'` and an empty `citations` array. This message is hard-coded in the service (`FALLBACK` constant) and does not involve any AI call — it is always available even when the AI provider is down.
 
-### 7.4 Session Management
+### D. Session Management
 
 Every chatbot exchange is persisted to a `ChatbotSession` document.
 
@@ -319,7 +319,7 @@ Every chatbot exchange is persisted to a `ChatbotSession` document.
 
 **Session restore:** On panel open, `Chatbot.jsx` calls `GET /api/chatbot/session/:token` to hydrate prior messages into local state.
 
-### 7.5 Prompt Construction and Grounded Composition
+### E. Prompt Construction and Grounded Composition
 
 The `buildPrompt(question, contextLabel, contextText)` helper produces:
 
@@ -405,7 +405,7 @@ This is the **only file in the entire codebase that imports or calls the AI prov
 
 This isolation means swapping the AI provider in production is a change to one file and its environment variables, not a codebase-wide refactor.
 
-### 10.1 Mock Mode
+### A. Mock Mode
 
 Mock mode is active whenever `AI_API_KEY` is absent or empty:
 
@@ -423,7 +423,7 @@ In mock mode:
 
 Mock mode allows the entire platform — including FAQ search, chatbot, and duplicate detection — to run with zero network access and zero quota consumption. This is the default for all local development, CI pipelines, and demo environments without a configured API key.
 
-### 10.2 Live Mode — Gemini via @google/genai
+### B. Live Mode — Gemini via @google/genai
 
 When `AI_API_KEY` is set, the module lazily constructs a `GoogleGenAI` client on the first call and reuses it for all subsequent requests. The SDK is imported dynamically (`await import('@google/genai')`) so it is only loaded when actually needed.
 
@@ -438,7 +438,7 @@ The models used, all configurable via environment variables:
 
 The embedding call uses `outputDimensionality: config.ai.embedDims` to request fixed-size vectors, ensuring all stored embeddings across the database are the same length and cosine similarity is always valid.
 
-### 10.3 Request Queue and Exponential Backoff
+### C. Request Queue and Exponential Backoff
 
 All live AI calls are serialized through a shared promise chain (`queue`) and wrapped in an exponential backoff retry loop:
 
@@ -448,7 +448,7 @@ All live AI calls are serialized through a shared promise chain (`queue`) and wr
 
 This means a transient quota spike degrades gracefully: the call eventually succeeds after backoff, or fails cleanly and allows the `compose()` function in `chatbotService` to return the grounded fallback text.
 
-### 10.4 Public API Surface
+### D. Public API Surface
 
 ```js
 ai.mockMode           // Boolean — true when no API key is set
@@ -497,112 +497,56 @@ This job is also the **migration path when the embedding model changes** (e.g. m
 
 ### FAQ Search Flow
 
-```
-User types in search bar (300ms debounce)
-        │
-        ▼
-GET /api/faq/search?q=<term>
-        │
-        ▼
-faqService.searchFaqs(term)
-  ├── ai.embed(term)  ──► 768-dim query vector
-  ├── FaqEntry.find({ is_deleted: false })
-  └── for each entry:
-        score = cosineSimilarity(qVec, entry.embedding)
-              + (keyword match ? 0.3 : 0)
-        │
-        ▼
-  filter score > 0.05 → sort desc → top 10
-        │
-        ▼
-Client renders accordion of results
-        │
-  [if 0 results]
-        ▼
-  "Not in the FAQ" consent prompt shown
-        │
-  [user clicks "Yes, check the forum"]
-        ▼
-  GET /api/queries/search?q=<term>
-  Results shown as linked list with status badges
+```mermaid
+flowchart TD
+    A[User types in search bar<br/>300ms debounce] --> B["GET /api/faq/search?q=term"]
+    B --> C[faqService.searchFaqs]
+    C --> D["ai.embed(term) → 768-dim vector"]
+    C --> E["FaqEntry.find(is_deleted:false)"]
+    D & E --> F["score = cosineSimilarity + (keyword ? 0.3 : 0)"]
+    F --> G[filter score > 0.05 → sort desc → top 10]
+    G --> H{Any results?}
+    H -->|Yes| I[Client renders accordion of results]
+    H -->|No| J["Not in the FAQ consent prompt"]
+    J -->|User clicks Yes, check the forum| K["GET /api/queries/search?q=term"]
+    K --> L[Linked list with status badges]
 ```
 
 ### Chatbot RAG Pipeline
 
-```
-User sends message
-        │
-        ▼
-POST /api/chatbot/ask  { message, session_token, check_forum: false }
-        │
-        ▼
-chatbotService.ask()
-  ├── getOrCreateSession()  (server-minted UUID token)
-  ├── ai.embed(message)  ──► qEmbed
-  └── [Tier 1] FaqEntry.find() → bestMatch(qEmbed, faqs)
-          │
-    score ≥ 0.3?
-    ┌──── YES ────────────────────────────────────────────┐
-    │  buildPrompt(msg, 'FAQ entry', faq.question+answer) │
-    │  compose(prompt, faq.answer)                        │
-    │  → { source_tier:'faq', citations:[{kind:'faq'}] }  │
-    └─────────────────────────────────────────────────────┘
-          │
-          NO
-          ▼
-    { source_tier:'await_forum', awaiting_forum:true }
-    Client shows "Yes / No" consent buttons
-          │
-    [user clicks YES]
-          ▼
-POST /api/chatbot/ask  { message, session_token, check_forum: true }
-          │
-          ▼
-    [Tier 2] Query.find(accepted+embedding) → bestMatch(qEmbed)
-          │
-    score ≥ 0.3?
-    ┌──── YES ──────────────────────────────────────────────────┐
-    │  answer = Answer.findById(q.accepted_answer_id)           │
-    │  compose(buildPrompt(msg,'community answer', ...), body)   │
-    │  → { source_tier:'community', citations:[{kind:'query'}] } │
-    └───────────────────────────────────────────────────────────┘
-          │
-          NO
-          ▼
-    { source_tier:'fallback', content: FALLBACK }
-          │
-    session.messages.push(user+assistant turns)
-    session.save()
+```mermaid
+flowchart TD
+    A[User sends message] --> B["POST /api/chatbot/ask<br/>check_forum: false"]
+    B --> C[chatbotService.ask]
+    C --> D["getOrCreateSession (server-minted UUID)"]
+    D --> E["ai.embed(message) → qEmbed"]
+    E --> F["Tier 1: bestMatch(qEmbed, FAQs)"]
+    F --> G{score ≥ 0.3?}
+    G -->|Yes| H["compose(prompt, faq.answer)<br/>source_tier: faq"]
+    G -->|No| I["source_tier: await_forum<br/>show Yes/No consent buttons"]
+    I -->|User clicks Yes| J["POST /api/chatbot/ask<br/>check_forum: true"]
+    J --> K["Tier 2: bestMatch over accepted queries"]
+    K --> L{score ≥ 0.3?}
+    L -->|Yes| M["compose with accepted answer body<br/>source_tier: community"]
+    L -->|No| N["source_tier: fallback (FALLBACK constant)"]
+    H & M & N --> O["session.messages.push(user + assistant) → save"]
 ```
 
 ### Q&A Promotion Flow
 
-```
-Admin views resolved query in AdminFaqManager
-        │
-        ▼
-POST /api/faq/promote/:queryId   (admin JWT required)
-        │
-        ▼
-faqService.promoteQueryToFaq(queryId)
-  ├── Query must exist, not deleted
-  ├── Query must have accepted_answer_id
-  ├── Accepted answer must exist and not be deleted
-  ├── No prior promotion of this queryId
-  └── createFaq({
-        category: query.category,
-        question: query.title,
-        answer:   acceptedAnswer.body,
-        source:   'qa',
-        sourceQueryId: query._id
-      })
-        │
-        ▼
-  ai.embed(question + answer) → embedding stored
-  FaqEntry created with source='qa', source_query_id set
-        │
-        ▼
-Entry appears in FAQ accordion with "Promoted from Q&A" chip
+```mermaid
+flowchart TD
+    A[Admin views resolved query in AdminFaqManager] --> B["POST /api/faq/promote/:queryId<br/>(admin JWT required)"]
+    B --> C[faqService.promoteQueryToFaq]
+    C --> D{Preconditions}
+    D --> D1[Query exists, not deleted]
+    D --> D2[Query has accepted_answer_id]
+    D --> D3[Accepted answer exists, not deleted]
+    D --> D4[No prior promotion of this queryId]
+    D1 & D2 & D3 & D4 --> E["createFaq(category, title, answer,<br/>source: qa, sourceQueryId)"]
+    E --> F["ai.embed(question + answer) → embedding stored"]
+    F --> G[FaqEntry created with source=qa]
+    G --> H[Entry appears in accordion with<br/>Promoted from Q&A chip]
 ```
 
 ---
