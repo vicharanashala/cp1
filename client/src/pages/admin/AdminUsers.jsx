@@ -13,9 +13,11 @@ export default function AdminUsers() {
     setData(await listUsers(search ? { q: search } : {}));
   }, []);
 
+  // Live, debounced search: results update as you type - no need to click Search.
   useEffect(() => {
-    load('');
-  }, [load]);
+    const t = setTimeout(() => load(q.trim()), 300);
+    return () => clearTimeout(t);
+  }, [q, load]);
 
   const act = async (fn) => {
     setBusy(true);
@@ -73,7 +75,7 @@ export default function AdminUsers() {
                 ) : u.moderator_requested ? (
                   <span className="badge flag">requested</span>
                 ) : (
-                  <span className="muted small">—</span>
+                  <span className="muted small">-</span>
                 )}
               </td>
               <td>{u.points}</td>

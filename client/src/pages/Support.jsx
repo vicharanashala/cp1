@@ -18,7 +18,7 @@ export default function Support() {
         </li>
         <li>
           <strong>Ask the Assistant</strong>
-          <p className="muted">The chatbot answers from the knowledge base — bottom-right.</p>
+          <p className="muted">The chatbot answers from the knowledge base - bottom-right.</p>
         </li>
         <li>
           <strong>Ask the Community</strong>

@@ -117,10 +117,10 @@ export default function AskQuery() {
 
   return (
     <div className="container narrow-wide">
-      <h1>Ask a question</h1>
+      <h1>Raise a Query</h1>
       <p className="lead">
-        Your question runs through quality gates — gibberish detection, an optional grammar check,
-        and duplicate detection — so the knowledge base stays clean.
+        Your query runs through quality gates (gibberish detection, an optional grammar check,
+        and duplicate detection) so the knowledge base stays clean.
       </p>
 
       <form onSubmit={onSubmit} className="form">
@@ -132,7 +132,7 @@ export default function AskQuery() {
         </label>
 
         <label>
-          Details (Markdown supported)
+          Details
           <textarea name="body" value={form.body} onChange={onChange} rows={8} required />
         </label>
 
@@ -203,7 +203,7 @@ export default function AskQuery() {
         <label>
           Add a screenshot
           <span className="hint">
-            Adding a screenshot gives moderators context and makes your question easier to solve (up
+            Adding a screenshot gives your peers context and makes your query easier to solve (up
             to 4 images).
           </span>
           <input
@@ -215,7 +215,7 @@ export default function AskQuery() {
         </label>
 
         <button className="btn-primary" disabled={busy}>
-          {busy ? 'Submitting…' : 'Submit question'}
+          {busy ? 'Submitting…' : 'Raise a Query'}
         </button>
       </form>
 
@@ -243,7 +243,7 @@ export default function AskQuery() {
             </>
           ) : (
             <>
-              <p>No changes suggested — your text looks good.</p>
+              <p>No changes suggested - your text looks good.</p>
               <button className="btn-link" onClick={() => setGrammar(null)}>
                 Close
               </button>

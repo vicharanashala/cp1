@@ -1,4 +1,4 @@
-// Client-side reputation tiers — mirrors the server's POSITIVE_BADGES
+// Client-side reputation tiers - mirrors the server's POSITIVE_BADGES
 // thresholds (server/config/constants.js). Used to render the reputation ring
 // and "points to next tier" on the dashboard. Milestone 14 will formalize this
 // in the profile API; until then it's derived from points client-side.

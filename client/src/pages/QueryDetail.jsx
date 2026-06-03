@@ -80,7 +80,7 @@ export default function QueryDetail() {
     if (reportTarget.type === 'query') await reportQuery(reportTarget.id, reason);
     else await reportAnswer(reportTarget.id, reason);
     setReportTarget(null);
-    window.alert('Thanks — a moderator will review it.');
+    window.alert('Thanks - a moderator will review it.');
   };
 
   const onPromote = async () => {
@@ -118,8 +118,8 @@ export default function QueryDetail() {
   };
 
   const resolved = query?.status === 'resolved';
-  // Only Expert-badge holders may escalate a question to the admins.
-  const canFlagAttention = Boolean(user?.badges?.includes('expert'));
+  // Expert-badge holders, moderators, and admins may escalate to the admins.
+  const canFlagAttention = Boolean(user?.badges?.includes('expert') || canModerate);
 
   if (loading) return <div className="container">Loading…</div>;
   if (error) return <div className="container"><p className="muted">{error}</p></div>;
@@ -232,7 +232,7 @@ export default function QueryDetail() {
           {query.similarity_score ? ` (${Math.round(query.similarity_score * 100)}% match)` : ''}
           {query.duplicate_of && (
             <>
-              {' — '}
+              {' - '}
               <Link to={`/queries/${query.duplicate_of}`}>view the similar question</Link>
             </>
           )}
@@ -252,7 +252,7 @@ export default function QueryDetail() {
         <div className="attachments">
           <span className="attachments-label">
             <span className="material-symbols-outlined">attachment</span>
-            {query.screenshots.length} attachment{query.screenshots.length > 1 ? 's' : ''} added —
+            {query.screenshots.length} attachment{query.screenshots.length > 1 ? 's' : ''} added -
             click to view
           </span>
           <div className="attachment-thumbs">
@@ -306,10 +306,10 @@ export default function QueryDetail() {
 
       {user && !resolved && !query.is_owner && <AnswerForm queryId={id} onPosted={loadAll} />}
       {user && !resolved && query.is_owner && (
-        <p className="muted">This is your question — you can’t answer it yourself. Others will reply here.</p>
+        <p className="muted">This is your question - you can’t answer it yourself. Others will reply here.</p>
       )}
       {resolved && (
-        <p className="muted">This question is closed — an answer was marked helpful, so it no longer accepts answers.</p>
+        <p className="muted">This question is closed - an answer was marked helpful, so it no longer accepts answers.</p>
       )}
 
       {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
@@ -528,7 +528,7 @@ function AnswerComments({ answer, canComment, onChange }) {
         <div key={c.id} className="comment">
           <span className="comment-body">{c.body}</span>
           <span className="comment-meta">
-            — {c.author?.name ?? 'Unknown'}
+            - {c.author?.name ?? 'Unknown'}
             {c.is_owner && (
               <button className="comment-del" onClick={() => remove(c.id)} title="Delete comment">
                 ×
@@ -672,7 +672,7 @@ function AnswerForm({ queryId, onPosted }) {
         value={body}
         onChange={setBody}
         rows={6}
-        placeholder="Share what you know… Markdown is supported."
+        placeholder="Share what you know…"
         required
       />
       <button className="btn-primary" disabled={busy || !body.trim()}>

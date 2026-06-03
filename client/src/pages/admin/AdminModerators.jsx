@@ -1,17 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { listModerators } from '../../api/admin.js';
+import { listModerators, setModerator } from '../../api/admin.js';
 
 // The full moderation roster: every moderator plus admins (who moderate too).
 export default function AdminModerators() {
   const [mods, setMods] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     listModerators()
       .then(setMods)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Revoke moderator rank directly from this roster (no trip to the Users tab).
+  const removeModerator = async (m) => {
+    if (!window.confirm(`Remove moderator rank from ${m.name}?`)) return;
+    setBusy(true);
+    try {
+      await setModerator(m.id, false);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (loading) return <p>Loading…</p>;
 
@@ -20,7 +38,7 @@ export default function AdminModerators() {
       <header className="overview-head">
         <h2>Moderators</h2>
         <p className="muted">
-          Everyone with moderation powers. Grant or revoke moderator access from the Users tab.
+          Everyone with moderation powers. You can revoke moderator rank right here.
         </p>
       </header>
 
@@ -34,6 +52,7 @@ export default function AdminModerators() {
               <th>Email</th>
               <th>Role</th>
               <th>Points</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -51,6 +70,19 @@ export default function AdminModerators() {
                   )}
                 </td>
                 <td>{m.points}</td>
+                <td>
+                  {m.is_admin ? (
+                    <span className="muted small">-</span>
+                  ) : (
+                    <button
+                      className="btn-link danger"
+                      disabled={busy}
+                      onClick={() => removeModerator(m)}
+                    >
+                      Remove moderator
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -3,7 +3,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github.css';
 
-// Heavy renderer (pulls in highlight.js) — loaded lazily via Markdown.jsx so it
+// Heavy renderer (pulls in highlight.js) - loaded lazily via Markdown.jsx so it
 // only ships on the question-thread route, keeping the main bundle lean.
 export default function MarkdownView({ children }) {
   return (

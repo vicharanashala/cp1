@@ -27,7 +27,7 @@ export default function AdminRollback() {
       await fn();
       await load();
     } catch (err) {
-      window.alert(err.response?.data?.error ?? 'Could not restore — the window may have passed.');
+      window.alert(err.response?.data?.error ?? 'Could not restore - the window may have passed.');
     } finally {
       setBusy(false);
     }

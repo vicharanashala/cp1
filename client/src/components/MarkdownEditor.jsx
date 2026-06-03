@@ -42,7 +42,6 @@ export default function MarkdownEditor({ value, onChange, placeholder, rows = 6,
             <span className="material-symbols-outlined">{t.icon}</span>
           </button>
         ))}
-        <span className="md-hint">Markdown supported</span>
       </div>
       <textarea
         ref={ref}

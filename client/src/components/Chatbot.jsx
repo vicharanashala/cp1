@@ -114,7 +114,7 @@ export default function Chatbot() {
           <div className="chat-messages" ref={scrollRef}>
             {messages.length === 0 && (
               <p className="muted chat-hint">
-                Ask a question and I'll answer from the FAQ first — if it's not there, I'll offer to
+                Ask a question and I'll answer from the FAQ first. If it's not there, I'll offer to
                 check the community forum.
               </p>
             )}
@@ -160,6 +160,15 @@ export default function Chatbot() {
               );
             })}
             {busy && <div className="chat-msg assistant"><div className="bubble">…</div></div>}
+          </div>
+          <div className="chat-actions">
+            <span className="chat-actions-label">Not satisfied? Use our</span>
+            <Link to="/faq" onClick={() => setOpen(false)}>
+              <span className="material-symbols-outlined">menu_book</span> FAQ database
+            </Link>
+            <Link to="/queries" onClick={() => setOpen(false)}>
+              <span className="material-symbols-outlined">groups</span> Forum
+            </Link>
           </div>
           <form className="chat-input" onSubmit={send}>
             <input

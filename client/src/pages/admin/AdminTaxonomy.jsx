@@ -84,7 +84,7 @@ export default function AdminTaxonomy() {
         <h2>Categories &amp; Tags</h2>
         <p className="muted">
           Curate the categories and tags users may pick when posting a question. Users cannot create
-          their own — they can only choose from this list or the built-in “Others” tag.
+          their own - they can only choose from this list or the built-in “Others” tag.
         </p>
       </header>
 

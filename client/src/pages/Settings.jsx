@@ -30,7 +30,7 @@ export default function Settings() {
     try {
       await requestModerator();
       updateUser({ moderator_requested: true });
-      setStatus({ ok: true, msg: 'Moderator request sent — an admin will review it.' });
+      setStatus({ ok: true, msg: 'Moderator request sent - an admin will review it.' });
     } catch (err) {
       setStatus({ ok: false, msg: err.response?.data?.error ?? 'Could not send the request.' });
     }
@@ -86,7 +86,7 @@ export default function Settings() {
       <section className="card" style={{ maxWidth: 520, marginTop: '1.5rem' }}>
         <h2>Moderator</h2>
         {user.is_moderator ? (
-          <p className="muted">You are a moderator — you can delete queries and regulate answers.</p>
+          <p className="muted">You are a moderator - you can delete queries and regulate answers.</p>
         ) : isExpert ? (
           user.moderator_requested ? (
             <p className="muted">Your moderator request is pending an admin&apos;s review.</p>

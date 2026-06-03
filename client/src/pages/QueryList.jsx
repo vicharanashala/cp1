@@ -81,7 +81,7 @@ export default function QueryList() {
   };
 
   // Dynamic search: debounce free-text typing (q + tag) into the URL so results
-  // update live as you type — no need to press a button.
+  // update live as you type - no need to press a button.
   useEffect(() => {
     if (form.q === q && form.tag === tag) return undefined;
     const t = setTimeout(() => commit({ q: form.q, tag: form.tag }), 300);
@@ -110,7 +110,7 @@ export default function QueryList() {
         </div>
         {user && (
           <Link to="/ask" className="btn-primary">
-            <span className="material-symbols-outlined">edit_square</span> Ask a Question
+            <span className="material-symbols-outlined">edit_square</span> Raise a Query
           </Link>
         )}
       </div>

@@ -31,7 +31,7 @@ export default function BanBanner() {
       Your account is banned{' '}
       {expires ? (
         <>
-          — lifting in <strong>{formatRemaining(expires - now)}</strong>
+          - lifting in <strong>{formatRemaining(expires - now)}</strong>
         </>
       ) : (
         <>permanently</>

@@ -77,7 +77,7 @@ export default function AdminModeration() {
                   {m.query_id ? (
                     <Link to={`/queries/${m.query_id._id}`}>{m.query_id.title}</Link>
                   ) : (
-                    '—'
+                    '-'
                   )}
                   {m.type === 'duplicate' && m.duplicate_of_query_id && (
                     <div className="muted small">
@@ -89,7 +89,7 @@ export default function AdminModeration() {
                     </div>
                   )}
                 </td>
-                <td className="small">{m.reason ?? '—'}</td>
+                <td className="small">{m.reason ?? '-'}</td>
                 <td className="small">{m.raised_by?.name ?? 'system'}</td>
                 <td>
                   <div className="row">

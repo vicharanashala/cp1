@@ -27,7 +27,7 @@ const ACTIONS = [
   },
   {
     icon: 'groups',
-    title: 'Ask the Community',
+    title: 'Raise a Query',
     desc: 'Tap into collective wisdom.',
     action: { type: 'link', to: '/ask' },
   },
@@ -58,7 +58,7 @@ function ActionCard({ icon, title, desc, action }) {
   );
 }
 
-// Circular reputation gauge (SVG). progress is 0–100.
+// Circular reputation gauge (SVG). progress is 0-100.
 function ReputationRing({ points, progress }) {
   const r = 52;
   const c = 2 * Math.PI * r;
@@ -136,7 +136,7 @@ function RecentActivity() {
         <h2>Recent Activity</h2>
       </div>
       {items.length === 0 ? (
-        <p className="muted">No activity yet — ask or answer something to get started.</p>
+        <p className="muted">No activity yet - ask or answer something to get started.</p>
       ) : (
         <ul className="activity-list">
           {items.map((a, i) => (
@@ -167,7 +167,7 @@ export default function Home() {
           <p className="lead">
             {user
               ? 'Here is your daily knowledge snapshot.'
-              : 'A self-improving knowledge base — AI chatbot, quality-gated questions, and a community forum.'}
+              : 'A self-improving knowledge base - AI chatbot, quality-gated questions, and a community forum.'}
           </p>
         </div>
         {user && streak > 1 && (

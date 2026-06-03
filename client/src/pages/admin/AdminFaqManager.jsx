@@ -30,7 +30,7 @@ export default function AdminFaqManager() {
         try {
           await createFaq(form);
         } catch (err) {
-          // The server flags a near-duplicate FAQ — let the admin confirm.
+          // The server flags a near-duplicate FAQ - let the admin confirm.
           const dup = err.response?.status === 409 && err.response?.data?.details?.duplicate;
           if (dup) {
             const existing = err.response.data.details.existing;

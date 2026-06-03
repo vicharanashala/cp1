@@ -1,206 +1,88 @@
-# Authentication & User Accounts
+<h1 align="center">Curio Wiki: Platform Documentation</h1>
 
-This page documents the authentication architecture, token rotation mechanisms, user roles, governance/ban flows, and notification settings implemented in **Curio**.
-
----
-
-## 1. Overview & Authentication Model
-
-Curio uses a stateless **JSON Web Token (JWT)** authentication model for the API, paired with a stateful **refresh token revocation database** for secure session invalidation.
-
-```
-┌──────────────┐          1. Credentials          ┌──────────────┐
-│  React Client│ ───────────────────────────────> │  Express API │
-│              │ <─────────────────────────────── │              │
-└──────────────┘    2. Access & Refresh Tokens    └──────────────┘
-       │                                                 │
-       │ Access Token (Bearer Header)                    │ Validate & Verify
-       ├───────────────────────────────────────────────> │ (via auth.js)
-       │                                                 │
-  [401 Expired]                                          │
-       │ 3. Send Refresh Token                           │ Revoke Old,
-       ├───────────────────────────────────────────────> │ Issue New Pair
-       │ <────────────────────────────────────────────── │ (Rotate)
-       │         4. New Access + Refresh Token           │
-```
-
-* **Access Token**: Short-lived JWT containing the user's ID (`sub`) and role (`role`). Stored in memory and `localStorage` on the client. Sent in the `Authorization: Bearer <token>` header.
-* **Refresh Token**: Long-lived JWT containing the user's ID (`sub`) and a unique identifier (`jti`). Stored in `localStorage` on the client. It is hashed (`SHA-256`) and stored in the database to allow remote revocation/logout.
-
-> [!IMPORTANT]
-> **Production Safety Guard**: The server environment resolver (`server/config/env.js`) prevents startup in a production environment (`NODE_ENV=production`) if default or missing JWT secrets are detected, mitigating the risk of credential leakage.
+**Curio** is a self-contained community knowledge platform that unifies everything a team needs to capture, organize, and grow its collective knowledge. Featuring a curated FAQ, a grounded AI chatbot, and a structured Q&A forum, Curio is built to improve itself over time by automatically promoting high-value community answers, archiving inactive threads, and filtering out low-quality queries.
 
 ---
 
-## 2. Database Models
+## The Curio Wiki Map
 
-Authentication and governance statuses are managed through two main MongoDB collections:
+To navigate the documentation, follow the sequential order:
 
-### A. User Model (`server/models/User.js`)
-Stores account credentials, reputation statistics, badge arrays, governance restrictions, and notification preferences.
-
-| Field | Type | Description |
-|---|---|---|
-| `name` | String | User's display name (sanitized and trimmed). |
-| `email` | String | Unique, lowercase email address used for login and admin attention tracking. |
-| `password_hash` | String | Bcrypt hash of the user's password (`select: false` by default). |
-| `role` | String | Enum matching `user` or `admin`. |
-| `is_moderator` | Boolean | True if the user has been granted moderator capabilities by an admin. |
-| `moderator_requested` | Boolean | True if an Expert user has requested moderation privileges. |
-| `points` | Number | Earned reputation total (from marking solutions or receiving answer likes). |
-| `badges` | Array of Strings | Keys of automatically earned reputation-tier positive badges. |
-| `negative_badges` | Array of Objects | Admin-issued flags (`warning`, `restricted`, `suspended`) with reasoning. |
-| `custom_badges` | Array of Objects | Admin-authored bespoke badges (includes automatic **Admin Verified** badge). |
-| `spam_flag_count` | Number | Counter of flagged submissions; triggers automated escalating penalties. |
-| `is_banned` | Boolean | Global lockout state flag. |
-| `ban_expires_at` | Date / Null | Timestamp for temporary ban expiration (null = permanent ban). |
-| `ban_reason` | String / Null | Description of why the ban was issued. |
-| `requires_approval` | Boolean | True if restricted (requires manual admin approval for all queries). |
-| `login_streak` | Number | Number of consecutive calendar days the user has logged in. |
-| `last_login_at` | Date | Timestamp of the user's last login. |
-| `notification_prefs` | Object | Map of preferences: `{ answers: boolean, mentions: boolean, system: boolean }`. |
-
-### B. Refresh Token Model (`server/models/RefreshToken.js`)
-Tracks active sessions and handles revocation.
-
-* **`user_id`**: Reference to the User.
-* **`token_hash`**: SHA-256 hash of the issued refresh token.
-* **`expires_at`**: TTL-indexed timestamp for automatic deletion upon expiration.
-* **`revoked`**: Boolean flag marked true upon logout or rotation.
+1. **Element 1: Authentication & User Accounts**: Covers user identity, register/login flows, secure token rotation, notification preferences, and account ban controls.
+2. **Element 2: Ask a Query & Forum Engine**: Details query submission quality gates (gibberish/spam/duplicate detection), the ticket-like forum answering loop, voting, bookmarks, and automated solution finalization.
+3. **Element 3: Reputation, Badges & Moderation**: Explains the community points system, positive badge tiers, negative flags, expert-to-moderator applications, and admin-verified answers.
+4. **Element 4: FAQ Knowledge Base & AI Chatbot**: Discusses FAQ search, category accordions, promote-to-FAQ promotion, and the tiered grounded chatbot RAG pipeline.
+5. **Element 5: Admin Dashboard & Maintenance**: Explains admin control tabs, moderation queues, audit logs, rollback windows, and the 8 automated database background jobs.
+6. **Element 6: Architecture, Setup & DevOps**: The technical foundation of the system, monorepo workspaces layout, swappable boundaries, testing infrastructure, and team Git conventions.
 
 ---
 
-## 3. Register & Login Flows
+# Element 1: Authentication & User Accounts
 
-### Registration
-Located in [`server/services/authService.js`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/server/services/authService.js#L34):
-1. Validates that `name`, `email`, and `password` are present and that the password is at least 8 characters.
-2. Checks for email uniqueness.
-3. Hashes the password using bcrypt.
-4. Initializes `login_streak` to 1.
-5. Saves the user record and issues the initial access/refresh token pair.
+Curio implements a secure authentication model using JSON Web Tokens (JWT) and a stateful refresh token database. At the heart of this system is the Curio Gatekeeper, which manages user identities, system permissions, and community moderation. It ensures that every contribution is attributed, every session is secure, and the community remains safe and productive.
 
-### Login & Streak Calculation
-Located in [`server/services/authService.js`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/server/services/authService.js#L56):
-1. Verifies credentials against the bcrypt hash.
-2. Calculates the **Login Streak**:
-   * If the last login date is exactly **1 calendar day** before today (ignoring hours), `login_streak` increments by 1.
-   * If the last login is **more than 1 calendar day** before today, `login_streak` resets to 1.
-   * If the last login was **today**, the streak remains unchanged.
-3. Updates `last_login_at` to the current timestamp.
-4. Generates and returns the user object, access token, and a new refresh token.
+## What Makes Curio's Identity System Unique?
+
+1. **Accountability by Design**: Anonymous posting is disabled. Every question, answer, and comment is linked to a verified user profile, encouraging constructive and high-quality participation.
+2. **Invisible Security Shield**: User sessions are guarded using a dual-token system (short-lived access keys and one-time rotating refresh keys). If a session is interrupted or suspicious, the system automatically handles security in the background without forcing constant logins.
+3. **Real-Time Role Enforcement**: Permissions are validated against live database records on every single action. If an admin promotes a user or bans a bad actor, the permissions take effect instantly across the platform.
+4. **Self-Safety Lockout Guard**: Administrators cannot demote, restrict, or ban their own accounts. This built-in guardrail prevents accidental locking out of the system's caretakers.
 
 ---
 
-## 4. Token Rotation & Refresh Mechanism
+## The Guided Tour of Identity & Moderation
 
-To protect against token hijacking, Curio implements **One-Time Use Refresh Tokens** with rotation.
+Here is an overview of how user accounts, permissions, and security rules operate in Curio, explained in simple language:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Client as Axios Client
-    participant API as Express /auth/refresh
-    participant DB as MongoDB
+### 1. Secure Registration & Login
+Creating an account and logging in are the entry points to Curio.
+- **Registration**: New users register with their name, email, and password. The system checks that emails are unique and enforces a secure password length.
+- **Password Hashing**: Passwords are encrypted before they ever reach the database, ensuring that user credentials remain completely secure.
 
-    Client->>API: POST /auth/refresh (send refreshToken)
-    API->>DB: Find token_hash & check status
-    alt Token is not found, expired, or already revoked
-        DB-->>API: Revoked or Missing
-        API-->>Client: 401 Unauthorized (Force Logout)
-    else Token is valid & active
-        API->>DB: Update stored token: set revoked = true
-        API->>DB: Create new RefreshToken hash row
-        API-->>Client: Return new AccessToken + RefreshToken
-    end
-```
+### 2. The Calendar Login Streak
+To encourage daily engagement, Curio tracks consecutive login streaks.
+- When a user logs in on a new calendar day, their streak increments by one.
+- If they miss a day, the streak resets to one.
+- Multiple logins within the same calendar day do not affect the streak, ensuring a fair tracking system across timezone changes.
 
-### Client-Side Integration
-Axios client setup in [`client/src/api/client.js`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/client/src/api/client.js):
-* An **interceptor request** automatically appends the current in-memory access token to every outgoing request.
-* A **response interceptor** catches `401 Unauthorized` errors.
-  * If a refresh token is present in local storage, it triggers a single, unified `POST /api/auth/refresh` request.
-  * While this refresh promise is in flight, any concurrent `401` errors are queued to wait for this same promise (`refreshing` lock).
-  * On success, the new tokens are saved to local storage, and the failed requests are replayed with the new access token.
-  * On failure (e.g., refresh token expired/revoked), local storage is cleared, and the user is redirected to the login gate.
+### 3. Dynamic User Profiles
+Every user has a public profile page that showcases their contributions and reputation.
+- It displays their total questions asked, answers posted, and registration date.
+- It highlights their current community standing, points total, and badge checklist.
+- If the user is currently banned or restricted, a prominent status banner is shown on their profile page.
 
----
+### 4. The Automatic Standing Engine
+As users answer questions and receive upvotes, they earn reputation points.
+- The standing engine dynamically calculates their tier: Helper (30 points), Contributor (100 points), Expert (200 points), or Legend (300 points).
+- The profile displays progress indicators showing how close they are to achieving the next level.
 
-## 5. Roles & Authorization Middleware
+### 5. Bespoke Notification Preferences
+Users can control how they want to receive system and community updates.
+- Under their private settings, users can toggle alerts for three categories: answers to their own questions, mentions or replies, and system or moderation notices.
 
-Curio supports three user roles: **User**, **Moderator**, and **Admin**. Roles and access gates are handled via the middleware modules in [`server/middleware/auth.js`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/server/middleware/auth.js):
+### 6. Expert-to-Moderator Roster Applications
+Reaching the Expert tier unlocks the ability to apply for moderation powers.
+- Eligible users see a button in their settings to request moderator privileges.
+- Submitting a request flags the user for administrative review, helping scale the moderation team organically from within the community.
 
-* **`auth`**: Ensures a valid access token is present in the `Authorization` header. Attaches the full, updated `req.user` database document to the request, which prevents stale role claims from client-side cookies.
-* **`optionalAuth`**: Decodes the token if present to establish user context (such as for checking ownership or moderation roles on queries), but does not block anonymous visitors (except for login gates).
-* **`admin`**: Checks that `req.user.role === 'admin'`. Rejects all other users with a `403 Forbidden`.
-* **`banCheck`**: Middleware applied to all write endpoints. Refreshes the user's document; if `is_banned` is true and `ban_expires_at` is either null (permanent) or in the future, it rejects the operation with a `403 Forbidden`.
+### 7. Core Access Control Roles
+The platform operates on a clear hierarchical permissions system:
+- **Standard Users**: Can browse the FAQ, ask queries, answer forum threads, comment, upvote, and bookmark posts.
+- **Moderators**: Trusted contributors who can edit categories, flag content for admin review, and delete offensive questions or answers.
+- **Administrators**: Control the entire platform, including editing categories, managing database jobs, promoting questions to the FAQ, and issuing bans or badges.
 
----
+### 8. Admin-Issued Custom Badges
+Administrators can award custom badges to users to highlight specialized expertise or achievements (such as "Documentation Hero").
+- **Admin Verified Badge**: Automatically awarded to a user when an administrator marks one of their forum answers as authoritative. This badge remains pinned to their profile permanently.
 
-## 6. User Profiles, Settings & Notifications
+### 9. Account Ban Controls
+When users violate community guidelines, administrators can lock their accounts.
+- **Temporary Bans**: Admins can specify a duration (e.g., 24 hours). The user is blocked from making any contributions, and their ban is lifted automatically by a background safety job once the timer expires.
+- **Permanent Bans**: Locks the account indefinitely.
+- The banned user is greeted with a ban banner displaying the reason for the lockout and the remaining time.
 
-### User Profiles
-Public profiles are loaded via the [`getProfile`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/server/services/userService.js#L12) service. It returns the user's credentials, statistics (total questions, answers, register date), reputation standing, and earned/custom badges.
-* **Automatic Standing Calculation**: Returns their current reputation level and progress (`pts_to_next`) calculated dynamically from the reputation tiers (Helper at 30 pts, Contributor at 100 pts, Expert at 200 pts, Legend at 300 pts).
-
-### Settings & Preferences
-Users manage their account via the Settings page:
-* **Display name**: Modifiable display name (max 80 chars, trimmed).
-* **Notification Preferences**: Configurable flags for different message types:
-  * `answers`: Notify when a reply is posted on their question.
-  * `mentions`: Notify when they are mentioned or replied to.
-  * `system`: Notify on system alerts or moderation logs.
-* **Moderator Request**: Users who have unlocked the **Expert** badge can submit a request to become a moderator. This sets `moderator_requested = true`, placing them on the admin request roster.
-
----
-
-## 7. Governance, Ban & Badge Flows
-
-```
-                        ┌─────────────────────────┐
-                        │      Admin Action       │
-                        └────────────┬────────────┘
-                                     │
-           ┌─────────────────────────┼─────────────────────────┐
-           ▼                         ▼                         ▼
-      [Issue Ban]              [Negative Badge]         [Custom Badge]
-           │                         │                         │
-  Temp (Hours) or Perm               │                Bespoke Badge awarded
-           │                 ┌───────┴───────┐        (e.g., Admin Verified)
-           ▼                 ▼               ▼                 │
-      Sets:              ⚠️ Warning      🚫 Restricted          │
-      is_banned: true    Info message    requires_approval     │
-      ban_expires_at     in profiles     flag is set.          │
-                                             │                 │
-                                             ▼                 ▼
-                                        Write endpoints   Visible on user
-                                        require admin     profile & under
-                                        approval first.   forum name.
-```
-
-All moderation actions are performed exclusively by administrators and are recorded in the central audit log:
-
-### The Ban/Unban Flow
-1. **Ban**: An administrator can issue a ban via [`banUser`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/server/services/userService.js#L90).
-   * Supports temporary bans (e.g., `24` hours) or permanent bans (omitting hours).
-   * Updates `is_banned = true` and calculates the expiry timestamp.
-   * Logs a `user.ban` event inside `AuditLog`.
-   * Sends an in-app system notification to the recipient explaining the reason.
-2. **Unban**: Handled via [`unbanUser`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/server/services/userService.js#L120).
-   * Resets `is_banned = false`, `ban_expires_at = null`, `ban_reason = null`, and `requires_approval = false`.
-   * Logs `user.unban` in the audit log and notifies the user.
-3. **Auto-Ban Expiry Cron**: An automated cron job executes hourly to search for users where `is_banned = true` and `ban_expires_at` has passed, automatically lifting the ban.
-
-### Negative Badges (Moderation Flags)
-Issued via [`issueNegativeBadge`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/server/services/userService.js#L152):
-* **⚠️ Warning**: Used as a behavioral warning.
-* **🚫 Restricted**: Sets `requires_approval = true`. The user remains logged in, but any new query they post is automatically flagged as `pending_moderation` and hidden until approved by a moderator.
-* **☠️ Suspended**: Auto-locks the account globally (sets `is_banned = true` permanently).
-
-### Custom Badges
-Issued via [`awardCustomBadge`](file:///C:/Users/Lenovo/.gemini/antigravity/scratch/cp1/server/services/userService.js#L262):
-* Admins can create and assign free-form badges with custom labels and emojis (e.g., "Top Doc Writer" 📝).
-* **Admin Verified** ✅: Automatically assigned to a user when an administrator verifies one of their forum answers as authoritative. The badge remains on their profile even if the answer is subsequently unverified.
-
-> [!CAUTION]
-> **Self-Moderation Protection**: Admins cannot ban, warn, restrict, suspend, or award custom badges to their own accounts. The user interface explicitly hides these buttons when an admin views their own profile page, and the backend service rejects self-governance requests with a `400 Bad Request` block.
+### 10. Moderation Flags (Negative Badges)
+Administrators can issue specific behavioral penalties:
+- **Warning**: A formal notification shown on their profile that does not restrict their current permissions.
+- **Restricted**: Gates the user behind a post-approval wall. Any question they submit is automatically hidden from the public forum until approved by a moderator.
+- **Suspended**: Causes an immediate, permanent ban on the account.

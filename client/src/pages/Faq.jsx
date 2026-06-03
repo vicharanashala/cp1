@@ -36,7 +36,7 @@ export default function Faq() {
   }, []);
 
   // Dynamic search: query the FAQ semantically as the user types (debounced).
-  // The community forum is NOT searched here — only after the user opts in via
+  // The community forum is NOT searched here - only after the user opts in via
   // the "check the forum" prompt shown when the FAQ has no match.
   useEffect(() => {
     if (!term.trim()) {
@@ -109,7 +109,7 @@ export default function Faq() {
       </form>
       <p className="search-hint">
         <span className="material-symbols-outlined">bolt</span>
-        Semantic search is active — try asking full questions like “how do I report data?”
+        Semantic search is active. Try asking full questions like "how do I report data?"
       </p>
       <p className="search-hint">
         Can't find an answer? Check the forum or <Link to="/ask">raise a Query</Link>.

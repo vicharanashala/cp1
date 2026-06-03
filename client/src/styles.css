@@ -29,7 +29,7 @@
 
 /* Larger base type: rem-based sizing throughout scales up from this root. */
 html {
-  font-size: 112.5%; /* 18px */
+  font-size: 100%; /* 16px */
 }
 
 body {
@@ -795,7 +795,8 @@ textarea {
   border: none;
   color: var(--text);
   padding: 0.9rem 1.1rem;
-  font-size: 1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
@@ -810,7 +811,10 @@ textarea {
 .faq-a {
   padding: 0.9rem 1.1rem;
   white-space: pre-wrap;
-  color: var(--text);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.6;
 }
 .faq-source {
   display: block;
@@ -1152,7 +1156,7 @@ textarea {
   border-bottom: 1px solid var(--border);
 }
 
-/* "Not in the FAQ — check the forum?" consent prompt on the FAQ search page. */
+/* "Not in the FAQ - check the forum?" consent prompt on the FAQ search page. */
 .forum-offer {
   display: flex;
   align-items: center;
@@ -1173,6 +1177,37 @@ textarea {
 .btn-sm {
   padding: 0.3rem 0.7rem;
   font-size: 0.85rem;
+}
+
+/* Persistent chatbot footer: redirect to the FAQ database or the forum. */
+.chat-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.8rem;
+}
+.chat-actions .chat-actions-label {
+  color: var(--muted);
+  margin-right: auto;
+}
+.chat-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+.chat-actions a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* Author identity: name on one line, held badge underneath. */
@@ -1207,7 +1242,7 @@ textarea {
   border-left: 3px solid #1e7e34;
 }
 
-/* Tag picker on the ask/edit forms — fixed choices, no free text. */
+/* Tag picker on the ask/edit forms - fixed choices, no free text. */
 .tag-picker {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1604,8 +1639,10 @@ select:focus,
   padding: 1rem 1.25rem;
   cursor: pointer;
   color: var(--text);
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 .faq-cat-name {
   flex: 1;

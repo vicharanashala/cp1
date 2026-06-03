@@ -4,7 +4,7 @@ import { getAttentionQueue, clearAttention } from '../../api/admin.js';
 import { relativeTime } from '../../lib/time.js';
 
 // Questions Experts have escalated, grouped by category and (within a category)
-// ordered by posting date then the author's joining date — server-sorted.
+// ordered by posting date then the author's joining date - server-sorted.
 function groupByCategory(items) {
   const groups = new Map();
   for (const it of items) {
@@ -48,7 +48,7 @@ export default function AdminAttention() {
         <h2>Needs Admin Attention</h2>
         <p className="muted">
           Questions escalated by Expert members, grouped by category. The queue lists each asker by
-          their email id — click an email to open the question.
+          their email id - click an email to open the question.
         </p>
       </header>
 
@@ -65,7 +65,7 @@ export default function AdminAttention() {
               {g.rows.map((r) => (
                 <li key={r.id}>
                   <Link to={`/queries/${r.id}`} className="email-link">
-                    {r.email ?? 'unknown@—'}
+                    {r.email ?? 'unknown@-'}
                   </Link>
                   <span className="small muted">{relativeTime(r.posted_at)}</span>
                   <button className="btn-link" disabled={busy} onClick={() => resolve(r.id)}>

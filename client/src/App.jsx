@@ -32,7 +32,7 @@ export default function App() {
   const { user, loading } = useAuth();
 
   // Authentication gate: until a user is logged in, expose nothing but the
-  // auth screens — no app shell, dashboards, or sections. Everything else
+  // auth screens - no app shell, dashboards, or sections. Everything else
   // redirects to /login; logging in lands on the main app.
   if (loading) {
     return <div className="auth-gate">Loading…</div>;

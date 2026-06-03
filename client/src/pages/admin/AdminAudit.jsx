@@ -34,7 +34,7 @@ export default function AdminAudit() {
                 </td>
                 <td className="small">{a.performed_by?.name ?? 'system'}</td>
                 <td className="small">
-                  {a.details && Object.keys(a.details).length > 0 ? JSON.stringify(a.details) : '—'}
+                  {a.details && Object.keys(a.details).length > 0 ? JSON.stringify(a.details) : '-'}
                 </td>
               </tr>
             ))}
