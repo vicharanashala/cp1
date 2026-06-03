@@ -1,270 +1,66 @@
-# Ask a Query & Forum
+# Curio Forum: From Question to Trusted Answer
 
-## Overview
+Most forums fill up with noise — duplicate questions, half-typed gibberish, and threads that never reach a real conclusion. Curio's Ask a Query & Forum Engine is built to do the opposite: keep low-quality questions out at the front door, guide every question toward a single trusted answer, and preserve that answer so the next person never has to ask again.
 
-The Ask a Query & Forum Engine enables users to post questions, receive answers, participate in discussions, and discover existing solutions. The module focuses on structured query management, content quality validation, search, and community-driven problem solving.
+What makes Curio's forum unique is that it behaves less like a noisy message board and more like a **well-run support desk** — every question is attributed, quality-checked, and steered toward resolution.
 
-Key capabilities include:
-
-- Structured query submission
-- Category and tag taxonomy enforcement
-- Screenshot attachments
-- AI-assisted grammar correction
-- Noise detection
-- Duplicate query detection
-- Search and filtering
-- Answer and comment management
-- Voting and bookmarking
-- Accepted answer workflows
-- Automated solution finalization
+Here is a simple, feature-first guide to how asking, answering, and resolving works in Curio.
 
 ---
 
-# Question Posting Workflow
+## What Makes Curio Unique?
 
-## Query Submission Interface
-
-Users are required to provide:
-
-| Field         | Required |
-| ------------- | -------- |
-| Title         | Yes      |
-| Body          | Yes      |
-| Category      | Yes      |
-| Tags          | Yes      |
-| Joining Date  | Yes      |
-| Contact Email | Yes      |
-| Attachments   | Optional |
-
-Anonymous posting is not supported. Any anonymous flag is ignored and forced to `false` on the server.
+1. **Quality Gates at the Front Door**: Before a question ever reaches the community, Curio checks it for gibberish, spam, and duplicates. Noise is stopped before it wastes anyone's time.
+2. **A Support-Ticket Conversation**: Curio is not a free-for-all. A question is a focused conversation between the asker and the people helping them — there is no cross-talk, no peer bickering, just answers.
+3. **Always Attributed**: Anonymous posting is disabled. Every question and answer is tied to a real profile, which keeps the tone constructive and the quality high.
+4. **Self-Resolving Threads**: Questions don't rot in limbo. If no one is marked as the solution, Curio automatically finalizes the thread after a grace period and preserves the best answer.
 
 ---
 
-## Category & Tag Validation
+## The Guided Tour of Forum Features
 
-Categories and tags are managed through the taxonomy system.
+Here is what you can do in the Curio forum, explained in simple language:
 
-The backend validates:
+### 1. Asking a Well-Structured Question
+Creating a question is guided, not freeform. Users provide a title, a description, a category, and tags — plus their joining date and a contact email so the team can follow up. Screenshots can be attached for extra context. Because every field is structured, questions arrive organized and easy to route from the moment they're posted.
 
-- Category exists
-- Tags are valid
-- Invalid values are rejected
+### 2. Curated Categories & Tags
+Users don't invent their own labels. They choose a category (like "Technical" or "Registration") and tags from an admin-curated list, with an "Others" option as a catch-all. This keeps the whole forum tidy and searchable instead of drowning in inconsistent, free-form tags.
 
-This helps maintain consistent organization across forum content.
+### 3. Optional Grammar Assist
+Before submitting, a user can run an optional grammar check. Curio suggests cleaner phrasing in a side-by-side preview, and the user decides whether to accept the polished version or keep their original wording. The meaning is never changed — only the clarity.
 
----
+### 4. Noise & Gibberish Detection
+Every submission is checked for quality: it must be long enough, must not be random repeated characters, and must contain enough real words. Nonsense is rejected on the spot. Repeated offenders face an escalating spam ladder — starting with a warning, then a temporary ban, then post-approval restrictions, and finally a permanent suspension.
 
-## Attachment Support
+### 5. Smart Duplicate Detection
+When a question is posted, Curio compares its meaning against existing questions — not just the keywords. If a close match already exists, the user is shown the likely duplicate and can either jump straight to it or post anyway, in which case it's flagged for a moderator to review rather than silently blocked.
 
-Users can upload screenshots while creating a query.
+### 6. Powerful Search & Browsing
+Finding existing questions is effortless. Users can browse by status, category, and tags, or search two ways: classic keyword search, and semantic search that finds conceptually similar questions even when the wording is different. Resolved questions automatically sink to the bottom of the list, keeping active discussions front and center.
 
-### Features
+### 7. Answering a Question
+Any community member can answer an open question — with one important rule: **you cannot answer your own question.** The first answer flips the question from "Open" to "Answered" and notifies the asker. Banned users and closed threads cannot receive new answers, keeping the conversation clean and current.
 
-- Multiple image uploads
-- Preview before submission
-- Image viewing in query details
+### 8. The 15-Minute Edit Window
+Made a typo? Authors can edit their own question or answer for 15 minutes after posting. After that, the content locks to preserve the integrity of the discussion — though moderators and admins can still step in when needed.
 
-Attachments provide additional context for discussions.
+### 9. Focused Threaded Comments
+Under any answer, a short discussion can happen — but only between the **question author and that answer's author.** Outsiders can read along but can't jump in. This keeps each thread a focused, two-way clarification instead of a crowded comment war, and both participants are notified of new replies.
 
----
+### 10. Voting & Bookmarking
+Questions and answers can be upvoted and downvoted to surface the best content, and self-voting is blocked. Importantly, only upvotes ever add to an author's reputation — downvotes are recorded but never deduct points, so no one fears participating. Users can also bookmark useful questions to a private saved list for later.
 
-## Grammar Correction Workflow
+### 11. Marking an Answer Helpful
+The question author (or a moderator/admin) marks the answer that solved their problem as **helpful**. This stamps it with a ✓ Solution badge, pins it to the top, closes the question as Resolved, and rewards the answer's author with reputation points. If they change their mind, unmarking reopens the thread — and previously awarded points are never clawed back.
 
-Before submitting a query, users may optionally perform grammar correction.
-
-A diff modal presents the proposed corrections.
-
-The user may:
-
-* Accept all changes
-* Keep the original content
-
-When corrections are accepted, both corrected content and original content are submitted.
-
----
-
-## Query Creation Pipeline
-
-The service performs the following operations:
-
-1. Input coercion
-2. Taxonomy validation
-3. Joining date validation
-4. Contact email validation
-5. Anonymous flag enforcement
-6. Gibberish detection
-7. Spam handling
-8. Embedding generation
-9. Duplicate detection
-10. Query persistence
+### 12. Automated Solution Finalization
+Not every thread gets a manual resolution, and that's fine. A background engine reviews questions that have stayed answered for more than 48 hours. If an answer was already accepted, it's confirmed and points are awarded; if not, the highest-voted answer is automatically promoted as the solution. To keep threads concise, only the top three answers are preserved, and every finalization is recorded in the audit log.
 
 ---
 
-# Taxonomy Management
+## A Forum That Resolves Itself
 
-The platform uses a controlled taxonomy model.
+Curio's forum is designed so that good answers rise, noise stays out, and no question is left hanging. Quality gates filter submissions before they reach the community, the support-ticket model keeps conversations focused, and the finalization engine ensures every thread eventually reaches a trusted conclusion.
 
-Categories and tags are validated against records stored in the taxonomy collection.
-
-Validation occurs during:
-
-* Query creation
-* Query update
-* Moderator re-categorization
-
-Invalid values immediately generate validation failures.
-
-Only administrator-approved taxonomy values may be used.
-
----
-
-# Noise Detection
-
-All submitted query content is evaluated for quality before it is accepted. The system checks for:
-
-* Minimum content length
-* Repeated or nonsensical characters
-* Insufficient use of recognizable words
-
-Content that fails quality checks is rejected. Repeated violations lead to progressive penalties — from warning notifications to temporary bans, moderator-approval requirements, and eventual permanent suspension.
-
----
-
-## Duplicate Detection Logic
-
-Duplicate queries are detected using semantic similarity.
-
-### Workflow
-
-1. Generate embeddings
-2. Compare against existing queries
-3. Calculate similarity scores
-4. Flag potential duplicates
-
-This reduces repeated discussions and improves knowledge reuse.
-
-# Query Discovery & Search
-
-The query discovery system enables users to browse, search, and filter community questions through the `QueryList.jsx` interface and the query service layer.
-
-The backend supports:
-
-* Status filtering
-* Category filtering
-* Tag filtering
-* Pagination
-* Full-text search
-* Resolved-last ordering
-
-All filter values received through request parameters are coerced to strings before entering MongoDB filters to prevent malformed query injection.
-
----
-
-## Search Functionality
-
-The platform supports two search mechanisms:
-
-* **Full-text search** — keyword-based search using text indexes.
-* **Semantic search** — embedding-based search that finds conceptually similar queries even when exact keywords differ.
-
----
- 
-# Answers & Threaded Comments
-
- ## Answer Creation
-
-Community members can answer open queries. Restrictions:
-
-* Banned users cannot post answers.
-* Query authors cannot answer their own questions.
-* Resolved or archived queries do not accept new answers.
-
-When an answer is submitted, the query status changes from Open to Answered and the query author receives a notification.
-
----
-
-## Answer Editing & Deletion
-
-Answers may be edited within a 15-minute window by the author, a moderator, or an administrator. The original body is preserved on edit. Deletion is soft — deleted answers are flagged rather than permanently removed. Query status is automatically reconciled when answers are deleted.
-
----
-
-## Threaded Comments
-
-Comments can be posted under individual answers. Only the query author and the answer author may participate in a comment thread. Notifications are sent to the other participant on each new comment. Comments may be soft-deleted by the comment author, a moderator, or an administrator.
-
----
-
-# Voting & Bookmarking
-
-## Voting
-
-Both queries and answers support upvoting and downvoting. Self-voting is not permitted. For answers, only upvotes contribute to the author's reputation score; downvotes are recorded but do not reduce reputation.
-
----
-
-## Bookmarking
-
-Users can save useful queries for later reference. Saved queries are accessible from a dedicated bookmarks view and can be added or removed at any time.
-
----
-
-# Helpful Answer & Resolution
-
-## Mark Helpful
-
-The query author, a moderator, or an administrator can mark an answer as the accepted solution. This:
-
-* Marks the answer with a ✓ Solution badge.
-* Changes the query status to Resolved.
-* Prioritizes the accepted answer at the top of the thread.
-* Awards reputation points to the answer author.
-
----
-
-## Unmark Helpful
-
-Authorized users may reopen a resolved discussion by removing the accepted answer. The query returns to Answered status. Previously awarded reputation points are not reversed.
-
----
-
-# Automated Solution Finalization
-
-The platform runs an automated engine that resolves queries that remain open after 48 hours.
-
-## Eligibility
-
-A query is eligible when its status is Answered and it is more than 48 hours old.
-
----
-
-## Resolution
-
-Duplicate queries are detected using semantic similarity.
-
-This reduces repeated discussions and improves knowledge reuse.
-* If a manually accepted answer exists, it is retained and the query is marked Resolved with reputation awarded.
-* If no accepted answer exists, the highest-voted answer is automatically selected as the solution. No reputation is awarded in this case.
-
-To keep resolved threads concise, a maximum of three answers are preserved; lower-value answers are soft-deleted. Every finalization event is recorded in an audit log.
-
----
-
-# Frontend Responsibilities
-
-| Component       | Responsibility                                                                 |
-| --------------- | ------------------------------------------------------------------------------ |
-| AskQuery.jsx    | Query submission, attachments, grammar correction, duplicate warnings          |
-| QueryList.jsx   | Search, filtering, pagination, query discovery                                 |
-| QueryDetail.jsx | Full thread view, voting, bookmarking, answers, comments, resolution workflows |
-
----
-
-| Service          | Responsibility                                                        |
-| ---------------- | --------------------------------------------------------------------- |
-| queryService     | Query lifecycle, validation, duplicate detection, voting, bookmarking |
-| answerService    | Answer management, comments, helpful workflow, verification           |
-| solutionService  | Automatic solution finalization and cron execution                    |
-| gibberishService | Content quality validation                                            |
-| spamService      | Spam penalty enforcement                                              |
-| vectorService    | Semantic similarity search and duplicate detection                    |
+The result is a forum that doesn't just collect questions — it turns them into lasting, searchable knowledge that helps the whole community, automatically.
