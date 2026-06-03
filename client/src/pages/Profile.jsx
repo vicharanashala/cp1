@@ -43,7 +43,9 @@ export default function Profile() {
     <div className="container">
       <div className="profile-head">
         <h1>{profile.name}</h1>
-        <span className="points-pill">{profile.points} pts</span>
+        {!profile.is_admin && profile.points != null && (
+          <span className="points-pill">{profile.points} pts</span>
+        )}
         {profile.standing && (
           <span className="chip">
             {[profile.standing.tier.icon, profile.standing.tier.label].filter(Boolean).join(' ')}
@@ -83,26 +85,28 @@ export default function Profile() {
         </div>
       </div>
 
-      <section>
-        <h2>Badges</h2>
-        <p className="muted small">Reputation badges unlock automatically as points are earned.</p>
-        <ul className="badge-catalog">
-          {POSITIVE_BADGES.map((b) => {
-            const earned = earnedKeys.has(b.key);
-            return (
-              <li
-                key={b.key}
-                className={earned ? 'earned' : 'locked'}
-                title={earned ? `Earned · ${b.threshold}+ points` : `Unlocks at ${b.threshold} points`}
-              >
-                <span className="badge-icon">{b.icon}</span>
-                <span className="badge-label">{b.label}</span>
-                <span className="badge-req">{earned ? 'Earned' : `${b.threshold} pts`}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      {!profile.is_admin && (
+        <section>
+          <h2>Badges</h2>
+          <p className="muted small">Reputation badges unlock automatically as points are earned.</p>
+          <ul className="badge-catalog">
+            {POSITIVE_BADGES.map((b) => {
+              const earned = earnedKeys.has(b.key);
+              return (
+                <li
+                  key={b.key}
+                  className={earned ? 'earned' : 'locked'}
+                  title={earned ? `Earned · ${b.threshold}+ points` : `Unlocks at ${b.threshold} points`}
+                >
+                  <span className="badge-icon">{b.icon}</span>
+                  <span className="badge-label">{b.label}</span>
+                  <span className="badge-req">{earned ? 'Earned' : `${b.threshold} pts`}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {(profile.custom_badges?.length > 0 || (isAdmin && !isSelf)) && (
         <section>

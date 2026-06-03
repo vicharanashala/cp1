@@ -84,13 +84,15 @@ function serialize(obj, viewerId) {
   const authorId = authorRef?._id ?? authorRef;
   const isOwner = Boolean(viewerId && authorId && String(authorId) === String(viewerId));
 
+  // Admins don't carry reputation: hide their points/badge wherever authors show.
+  const isAdminAuthor = authorRef?.role === ROLES.ADMIN;
   const author = plain.is_anonymous
     ? { name: 'Anonymous', anonymous: true }
     : {
         id: authorId ?? null,
         name: authorRef?.name ?? null,
-        points: authorRef?.points ?? null,
-        badge: topBadge(authorRef?.badges),
+        points: isAdminAuthor ? null : (authorRef?.points ?? null),
+        badge: isAdminAuthor ? null : topBadge(authorRef?.badges),
       };
 
   // eslint-disable-next-line no-unused-vars
@@ -186,7 +188,7 @@ export async function createQuery(user, payload, screenshots = []) {
     });
   }
 
-  await doc.populate('author_id', 'name points badges');
+  await doc.populate('author_id', 'name points badges role');
   return serialize(doc, user._id);
 }
 
@@ -227,7 +229,7 @@ export async function listQueries(opts = {}, viewerId) {
     Query.aggregate(pipeline),
     Query.countDocuments(filter),
   ]);
-  const items = await Query.populate(rawItems, { path: 'author_id', select: 'name points badges' });
+  const items = await Query.populate(rawItems, { path: 'author_id', select: 'name points badges role' });
 
   const enriched = await withEngagement(items, viewerId);
   return { items: enriched, total, page, limit };
@@ -275,7 +277,7 @@ export async function searchQueries(qText, viewerId) {
   const qEmbed = await ai.embed(q);
   const lc = q.toLowerCase();
   const docs = await Query.find({ is_deleted: false, is_archived: false })
-    .populate('author_id', 'name points badges')
+    .populate('author_id', 'name points badges role')
     .lean();
 
   return docs
@@ -304,7 +306,7 @@ export async function getQuery(id, viewerId) {
     { $inc: { access_count: 1 }, $set: { last_accessed_at: new Date() } },
     { new: true },
   )
-    .populate('author_id', 'name points badges')
+    .populate('author_id', 'name points badges role')
     .lean();
   if (!doc) throw ApiError.notFound('Query not found');
 
@@ -379,7 +381,7 @@ export async function listBookmarks(user) {
   if (marks.length === 0) return { items: [] };
   const ids = marks.map((m) => m.query_id);
   const items = await Query.find({ _id: { $in: ids }, is_deleted: false })
-    .populate('author_id', 'name points badges')
+    .populate('author_id', 'name points badges role')
     .lean();
   // Preserve bookmark order (most-recently saved first).
   const order = new Map(ids.map((id2, i) => [String(id2), i]));
@@ -445,7 +447,7 @@ export async function updateQuery(user, id, payload) {
   }
 
   await doc.save();
-  await doc.populate('author_id', 'name points badges');
+  await doc.populate('author_id', 'name points badges role');
   return serialize(doc, user._id);
 }
 
@@ -494,7 +496,7 @@ export async function moderateTaxonomy(user, id, { category, tags }) {
   doc.category = resolved.category;
   doc.tags = resolved.tags;
   await doc.save();
-  await doc.populate('author_id', 'name points badges');
+  await doc.populate('author_id', 'name points badges role');
   return serialize(doc, user._id);
 }
 

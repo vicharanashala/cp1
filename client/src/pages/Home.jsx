@@ -155,9 +155,11 @@ function RecentActivity() {
 }
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const greeting = timeOfDay(new Date().getHours());
   const streak = user?.login_streak ?? 0;
+  // Admins don't carry reputation, so the reputation panel is hidden for them.
+  const showRep = Boolean(user) && !isAdmin;
 
   return (
     <div className="container">
@@ -178,7 +180,7 @@ export default function Home() {
         )}
       </header>
 
-      <div className={`dash-grid ${user ? 'with-rep' : ''}`}>
+      <div className={`dash-grid ${showRep || !user ? 'with-rep' : ''}`}>
         <div className="dash-left">
           <section className="action-cards">
             {ACTIONS.map((a) => (
@@ -188,9 +190,9 @@ export default function Home() {
           {user && <RecentActivity />}
         </div>
 
-        {user ? (
+        {showRep ? (
           <ReputationPanel user={user} />
-        ) : (
+        ) : !user ? (
           <aside className="card signup-card">
             <h2>Join the community</h2>
             <p className="muted">
@@ -203,7 +205,7 @@ export default function Home() {
               Browse questions →
             </Link>
           </aside>
-        )}
+        ) : null}
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ function initials(name = '') {
 
 // Sticky top bar: global search, notifications, and the account avatar menu.
 export default function Topbar({ onToggleNav }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [term, setTerm] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -77,7 +77,11 @@ export default function Topbar({ onToggleNav }) {
                 <div className="avatar-menu">
                   <div className="who">
                     <strong>{user.name}</strong>
-                    <span>{user.points ?? 0} pts</span>
+                    {isAdmin ? (
+                      <span>Admin</span>
+                    ) : (
+                      <span>{user.points ?? 0} pts</span>
+                    )}
                   </div>
                   <Link to={`/users/${user.id}`} onClick={() => setMenuOpen(false)}>
                     <span className="material-symbols-outlined">person</span> Profile

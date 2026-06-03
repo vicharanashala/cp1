@@ -20,21 +20,24 @@ export async function getProfile(userId) {
     Answer.countDocuments({ author_id: userId, is_deleted: false }),
   ]);
 
+  const isAdmin = user.role === 'admin';
+
   // Expand stored badge keys to full definitions for the UI.
-  const badges = (user.badges ?? [])
-    .map((k) => POSITIVE_BADGES.find((b) => b.key === k))
-    .filter(Boolean);
+  // Admins don't carry reputation, so they have no points/badges/standing.
+  const badges = isAdmin
+    ? []
+    : (user.badges ?? []).map((k) => POSITIVE_BADGES.find((b) => b.key === k)).filter(Boolean);
 
   return {
     id: user._id,
     name: user.name,
-    points: user.points,
+    points: isAdmin ? null : user.points,
     badges,
-    standing: standing(user.points),
+    standing: isAdmin ? null : standing(user.points),
     negative_badges: user.negative_badges ?? [],
-    custom_badges: user.custom_badges ?? [],
+    custom_badges: isAdmin ? [] : (user.custom_badges ?? []),
     is_moderator: Boolean(user.is_moderator),
-    is_admin: user.role === 'admin',
+    is_admin: isAdmin,
     is_banned: user.is_banned,
     ban_expires_at: user.ban_expires_at,
     ban_reason: user.ban_reason,

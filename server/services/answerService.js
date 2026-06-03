@@ -29,14 +29,16 @@ function serializeAnswer(obj, viewerId) {
   const isOwner = Boolean(viewerId && authorId && String(authorId) === String(viewerId));
   // eslint-disable-next-line no-unused-vars
   const { author_id, __v, ...rest } = plain;
+  // Admins don't carry reputation: hide their points/badge wherever authors show.
+  const isAdminAuthor = authorRef?.role === ROLES.ADMIN;
   return {
     ...rest,
     id: plain._id,
     author: {
       id: authorId ?? null,
       name: authorRef?.name ?? null,
-      points: authorRef?.points ?? null,
-      badge: topBadge(authorRef?.badges),
+      points: isAdminAuthor ? null : (authorRef?.points ?? null),
+      badge: isAdminAuthor ? null : topBadge(authorRef?.badges),
     },
     is_owner: isOwner,
   };
@@ -88,7 +90,7 @@ export async function postAnswer(user, queryId, body) {
     });
   }
 
-  await answer.populate('author_id', 'name points badges');
+  await answer.populate('author_id', 'name points badges role');
   return serializeAnswer(answer, user._id);
 }
 
@@ -96,7 +98,7 @@ export async function postAnswer(user, queryId, body) {
 export async function listAnswers(queryId, viewerId) {
   const answers = await Answer.find({ query_id: queryId, is_deleted: false })
     .sort({ is_verified: -1, is_helpful: -1, is_accepted: -1, like_count: -1, createdAt: 1 })
-    .populate('author_id', 'name points badges')
+    .populate('author_id', 'name points badges role')
     .lean();
 
   if (answers.length === 0) return [];
@@ -155,7 +157,7 @@ export async function updateAnswer(user, answerId, body) {
 
   answer.body = text;
   await answer.save();
-  await answer.populate('author_id', 'name points badges');
+  await answer.populate('author_id', 'name points badges role');
   return serializeAnswer(answer, user._id);
 }
 
@@ -381,9 +383,9 @@ export async function toggleHelpful(user, answerId) {
 }
 
 /**
- * Admin: mark (or unmark) an answer as "Admin Verified". Verifying records the
- * verifier, notifies the answerer, and grants them the persistent Admin Verified
- * badge (kept even if the answer is later unverified).
+ * Admin: mark (or unmark) an answer as "Admin Verified". Verification lives on
+ * the answer itself (shown under the answer and sorted to the top); it records
+ * the verifier and notifies the answerer. It does NOT grant any user badge.
  */
 export async function setVerified(admin, answerId, value) {
   if (admin.role !== ROLES.ADMIN) throw ApiError.forbidden('Only an admin can verify answers');
@@ -404,23 +406,14 @@ export async function setVerified(admin, answerId, value) {
   });
 
   if (verified) {
-    // Grant the answerer the persistent Admin Verified badge (idempotent).
-    const author = await User.findById(answer.author_id);
-    if (author && !author.is_deleted && !author.custom_badges.some((b) => b.key === VERIFIED_ANSWER_BADGE.key)) {
-      author.custom_badges.push({
-        key: VERIFIED_ANSWER_BADGE.key,
-        label: VERIFIED_ANSWER_BADGE.label,
-        icon: VERIFIED_ANSWER_BADGE.icon,
-        reason: 'An admin verified one of your answers',
-        issued_by: admin._id,
-      });
-      await author.save();
-    }
+    // Admin Verified is a property of the ANSWER (shown under the answer), not a
+    // badge on the answerer's profile. Just notify the author that their answer
+    // was verified — no user badge is granted.
     await notify({
       recipientId: answer.author_id,
-      type: NOTIFICATION_TYPE.BADGE,
-      title: 'Your answer was verified by an admin',
-      message: `${VERIFIED_ANSWER_BADGE.icon} Admin Verified`,
+      type: NOTIFICATION_TYPE.ANSWER,
+      title: 'Your answer was marked Admin Verified',
+      message: `${VERIFIED_ANSWER_BADGE.icon} ${VERIFIED_ANSWER_BADGE.label}`,
       link: `/queries/${answer.query_id}`,
       queryId: answer.query_id,
       answerId: answer._id,
