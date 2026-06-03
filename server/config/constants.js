@@ -19,6 +19,7 @@ export const MODERATION_TYPE = Object.freeze({
   SPAM: 'spam',
   OUTDATED: 'outdated',
   GIBBERISH: 'gibberish',
+  INCOMPLETE: 'incomplete',
 });
 
 export const MODERATION_STATUS = Object.freeze({
@@ -95,6 +96,12 @@ export const STALENESS_DAYS = 180; // flag answers older than this
 // Quality gates.
 export const DUPLICATE_SIMILARITY_THRESHOLD = 0.8; // >80% → flag duplicate
 export const MAX_ANSWERS_KEPT_ON_RESOLVE = 3;
+
+// Unfinished/incomplete-question gate (PLANNING §9). A submission that clears
+// the gibberish check can still be a half-typed, abandoned question. These
+// bound what counts as "complete enough" to reach the community.
+export const INCOMPLETE_MIN_BODY_WORDS = 4; // body must have at least this many words
+export const INCOMPLETE_MIN_TITLE_WORDS = 3; // title must have at least this many words
 
 // RAG chatbot: minimum cosine similarity for a retrieved doc to count as a match.
 export const CHATBOT_MATCH_THRESHOLD = 0.3;
