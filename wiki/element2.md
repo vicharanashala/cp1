@@ -1,73 +1,23 @@
-# Ask a Query & Forum Engine
+# Ask a Query & Forum
 
 ## Overview
 
-The Ask a Query & Forum Engine provides a structured community support system where users can post questions, receive answers, participate in threaded discussions, vote on content, bookmark useful queries, and finalize solutions. The module combines traditional forum functionality with AI-assisted quality control, duplicate detection, and automated solution resolution workflows.
-
-The implementation is distributed across frontend pages (`AskQuery.jsx`, `QueryList.jsx`, `QueryDetail.jsx`) and backend services (`queryService.js`, `answerService.js`, `solutionService.js`, `gibberishService.js`, `spamService.js`, and `vectorService.js`).
+The Ask a Query & Forum Engine enables users to post questions, receive answers, participate in discussions, and discover existing solutions. The module focuses on structured query management, content quality validation, search, and community-driven problem solving.
 
 Key capabilities include:
 
-* Structured query submission
-* Category and tag taxonomy enforcement
-* Screenshot attachments
-* AI-assisted grammar correction
-* Gibberish detection
-* Spam prevention and penalty escalation
-* Duplicate query detection using vector similarity
-* Hybrid keyword and semantic search
-* Answer management
-* Threaded comments
-* Voting and bookmarking
-* Helpful answer selection
-* Automated solution finalization
+- Structured query submission
+- Category and tag taxonomy enforcement
+- Screenshot attachments
+- AI-assisted grammar correction
+- Noise detection
+- Duplicate query detection
+- Search and filtering
+- Answer and comment management
+- Voting and bookmarking
+- Accepted answer workflows
+- Automated solution finalization
 
----
-
-# Architecture Overview
-
-The Ask a Query module follows a layered architecture:
-
-```text
-AskQuery.jsx
-    │
-    ▼
-POST /api/queries
-    │
-    ▼
-queryService.createQuery()
-    ├── Taxonomy Validation
-    ├── Gibberish Detection
-    ├── Spam Enforcement
-    ├── Embedding Generation
-    ├── Duplicate Detection
-    └── Query Storage
-
-QueryList.jsx
-    │
-    ▼
-queryService.listQueries()
-    ├── Filtering
-    ├── Search
-    ├── Pagination
-    └── Answer Count Aggregation
-
-QueryDetail.jsx
-    │
-    ├── Query Voting
-    ├── Query Bookmarking
-    ├── Answer Creation
-    ├── Helpful Marking
-    ├── Comment Management
-    └── Resolution Workflow
-
-solutionService
-    │
-    ▼
-Automatic Finalization
-```
-
-The backend services collaborate to enforce validation, moderation, duplicate prevention, and lifecycle management throughout the query resolution process.
 
 ---
 
@@ -75,7 +25,6 @@ The backend services collaborate to enforce validation, moderation, duplicate pr
 
 ## Query Submission Interface
 
-The query creation interface is implemented in `AskQuery.jsx`.
 
 Users are required to provide:
 
@@ -93,74 +42,37 @@ Anonymous posting is not supported. Any anonymous flag is ignored and forced to 
 
 ---
 
-## Category Selection
+## Category & Tag Validation
 
-Categories are loaded dynamically:
+Categories and tags are managed through the taxonomy system.
 
-```http
-GET /api/taxonomy?kind=category
-```
+The backend validates:
 
-The user must select a category from the administrator-maintained taxonomy list.
+- Category exists
+- Tags are valid
+- Invalid values are rejected
 
-No free-form categories are accepted.
-
----
-
-## Tag Selection
-
-Tags are loaded dynamically:
-
-```http
-GET /api/taxonomy?kind=tag
-```
-
-Tags are selected through predefined checkboxes.
-
-Custom user-generated tags are not permitted.
+This helps maintain consistent organization across forum content.
 
 ---
 
 ## Attachment Support
 
-The query form supports multiple image uploads.
+Users can upload screenshots while creating a query.
 
-```html
-<input
-  type="file"
-  multiple
-  accept="image/*"
-/>
-```
+### Features
 
-Attachments are submitted using:
+- Multiple image uploads
+- Preview before submission
+- Image viewing in query details
 
-```text
-multipart/form-data
-```
-
-Uploaded attachments are displayed within the interface using a lightbox viewer.
-
-The query detail page allows users to view attachment counts and open images in a zoomable preview.
+Attachments provide additional context for discussions.
 
 ---
 
 ## Grammar Correction Workflow
 
 Before submitting a query, users may optionally perform grammar correction.
-
-```http
-POST /api/queries/autocorrect
-```
-
-The API returns:
-
-```json
-{
-  "corrected": "...",
-  "changes": [...]
-}
-```
 
 A diff modal presents the proposed corrections.
 
@@ -174,20 +86,6 @@ When corrections are accepted, both corrected content and original content are s
 ---
 
 ## Query Creation Pipeline
-
-Query creation is performed through:
-
-```http
-POST /api/queries
-```
-
-Backend execution sequence:
-
-```text
-queryController.createQuery()
-    ↓
-queryService.createQuery()
-```
 
 The service performs the following operations:
 
@@ -218,214 +116,159 @@ Validation occurs during:
 
 Invalid values immediately generate validation failures.
 
-Example validation:
-
-```text
-Taxonomy.findOne({
-  kind,
-  name
-})
-```
-
 Only administrator-approved taxonomy values may be used.
 
 ---
 
-# Gibberish Detection Pipeline
 
-The system implements a two-layer content quality gate.
+# Noise Detection
 
----
+All submitted query content is evaluated for quality before it is accepted. The system checks for:
 
-## Layer 1: Heuristic Validation
+* Minimum content length
+* Repeated or nonsensical characters
+* Insufficient use of recognizable words
 
-Every submitted query body passes through heuristic analysis.
-
-Checks include:
-
-### Minimum Length
-
-Very short submissions are rejected immediately.
-
-### Repeated Character Detection
-
-Examples:
-
-```text
-aaaaaaaaaaaa
-!!!!!!!!!!!!
-```
-
-The service calculates a repeated-character ratio and rejects excessive repetition.
-
-### Dictionary Word Ratio
-
-The service evaluates:
-
-```text
-recognized_words / total_words
-```
-
-A low ratio indicates nonsensical content.
-
----
-
-## Layer 1 Outcomes
-
-### Pass
-
-Content is considered valid.
-
-### Fail
-
-Content is immediately rejected.
-
-### Borderline
-
-Content is escalated to Layer 2 AI analysis.
-
----
-
-## Layer 2: AI Evaluation
-
-Borderline content triggers AI-based validation.
-
-The service calls:
-
-```text
-ai.js cheapCall()
-```
-
-Expected response:
-
-```json
-{
-  "isvalid": true,
-  "confidence": 0.92,
-  "reason": "..."
-}
-```
-
-The AI determines whether the content appears meaningful.
-
----
-
-## Fail-Open Strategy
-
-If the AI service:
-
-* Returns HTTP 429
-* Times out
-* Encounters an error
-
-The submission is treated as valid.
-
-This prevents legitimate users from being blocked during AI quota exhaustion.
-
----
-
-# Spam Prevention & Penalty System
-
-Spam enforcement is handled by `spamService.js`.
-
-A user's spam history is tracked through:
-
-```text
-user.spamflagcount
-```
-
-Spam flags are generated when gibberish detection fails.
-
----
-
-## Penalty Escalation Levels
-
-| Offense Count | Action                                         |
-| ------------- | ---------------------------------------------- |
-| 1             | Warning notification                           |
-| 2             | Warning badge + 24-hour ban                    |
-| 5             | Restricted badge + moderator approval required |
-| 10            | Permanent suspension                           |
-
----
-
-## Enforcement Flow
-
-```text
-gibberishService.check()
-       │
-       ├── Pass
-       │     ↓
-       │   Continue
-       │
-       └── Fail
-             ↓
-     Increment spamflagcount
-             ↓
-     spamService.applySpamPenalty()
-```
-
-Each penalty update is persisted to the user record and generates appropriate notifications.
-
----
-
-# Duplicate Detection & Vector Search
-
-The platform uses embedding-based similarity detection to identify duplicate questions.
-
-## Embedding Generation
-
-After content validation:
-
-```text
-ai.js.embed(title + body)
-```
-
-An embedding vector is generated and stored with the query.
-
-The embedding becomes the basis for semantic search and duplicate detection.
-
----
-
-## Similarity Search
-
-Generated embeddings are compared against existing queries using:
-
-```text
-vectorService.findSimilarQueries()
-```
-
-The service:
-
-1. Loads stored query embeddings
-2. Computes cosine similarity
-3. Filters by threshold
-4. Returns ranked matches
-
-Similarity calculations are performed using:
-
-```text
-computeCosineSimilarity()
-```
+Content that fails quality checks is rejected. Repeated violations lead to progressive penalties — from warning notifications to temporary bans, moderator-approval requirements, and eventual permanent suspension.
 
 ---
 
 ## Duplicate Detection Logic
 
-When similarity exceeds the configured threshold:
+Duplicate queries are detected using semantic similarity.
 
-```text
-similarity > 0.80
-```
+### Workflow
 
-the query is marked as a potential duplicate.
+1. Generate embeddings
+2. Compare against existing queries
+3. Calculate similarity scores
+4. Flag potential duplicates
 
-Query fields updated:
+This reduces repeated discussions and improves knowledge reuse.
 
-```text
-isflaggedduplicate
-duplicateof
-similarityscore
-```
+# Query Discovery & Search
 
-A moderation record is also created.
+The query discovery system enables users to browse, search, and filter community questions through the `QueryList.jsx` interface and the query service layer.
+
+The backend supports:
+
+* Status filtering
+* Category filtering
+* Tag filtering
+* Pagination
+* Full-text search
+* Resolved-last ordering
+
+All filter values received through request parameters are coerced to strings before entering MongoDB filters to prevent malformed query injection.
+
+---
+
+## Search Functionality
+
+The platform supports two search mechanisms:
+
+* **Full-text search** — keyword-based search using text indexes.
+* **Semantic search** — embedding-based search that finds conceptually similar queries even when exact keywords differ.
+
+---
+ 
+# Answers & Threaded Comments
+
+ ## Answer Creation
+
+Community members can answer open queries. Restrictions:
+
+* Banned users cannot post answers.
+* Query authors cannot answer their own questions.
+* Resolved or archived queries do not accept new answers.
+
+When an answer is submitted, the query status changes from Open to Answered and the query author receives a notification.
+
+---
+
+## Answer Editing & Deletion
+
+Answers may be edited within a 15-minute window by the author, a moderator, or an administrator. The original body is preserved on edit. Deletion is soft — deleted answers are flagged rather than permanently removed. Query status is automatically reconciled when answers are deleted.
+
+---
+
+## Threaded Comments
+
+Comments can be posted under individual answers. Only the query author and the answer author may participate in a comment thread. Notifications are sent to the other participant on each new comment. Comments may be soft-deleted by the comment author, a moderator, or an administrator.
+
+---
+
+# Voting & Bookmarking
+
+## Voting
+
+Both queries and answers support upvoting and downvoting. Self-voting is not permitted. For answers, only upvotes contribute to the author's reputation score; downvotes are recorded but do not reduce reputation.
+
+---
+
+## Bookmarking
+
+Users can save useful queries for later reference. Saved queries are accessible from a dedicated bookmarks view and can be added or removed at any time.
+
+---
+
+# Helpful Answer & Resolution
+
+## Mark Helpful
+
+The query author, a moderator, or an administrator can mark an answer as the accepted solution. This:
+
+* Marks the answer with a ✓ Solution badge.
+* Changes the query status to Resolved.
+* Prioritizes the accepted answer at the top of the thread.
+* Awards reputation points to the answer author.
+
+---
+
+## Unmark Helpful
+
+Authorized users may reopen a resolved discussion by removing the accepted answer. The query returns to Answered status. Previously awarded reputation points are not reversed.
+
+---
+
+# Automated Solution Finalization
+
+The platform runs an automated engine that resolves queries that remain open after 48 hours.
+
+## Eligibility
+
+A query is eligible when its status is Answered and it is more than 48 hours old.
+
+---
+
+## Resolution
+
+* If a manually accepted answer exists, it is retained and the query is marked Resolved with reputation awarded.
+* If no accepted answer exists, the highest-voted answer is automatically selected as the solution. No reputation is awarded in this case.
+
+To keep resolved threads concise, a maximum of three answers are preserved; lower-value answers are soft-deleted. Every finalization event is recorded in an audit log.
+
+---
+
+# Frontend Responsibilities
+
+| Component       | Responsibility                                                                 |
+| --------------- | ------------------------------------------------------------------------------ |
+| AskQuery.jsx    | Query submission, attachments, grammar correction, duplicate warnings          |
+| QueryList.jsx   | Search, filtering, pagination, query discovery                                 |
+| QueryDetail.jsx | Full thread view, voting, bookmarking, answers, comments, resolution workflows |
+
+---
+
+# Service Layer Responsibilities
+
+| Service          | Responsibility                                                        |
+| ---------------- | --------------------------------------------------------------------- |
+| queryService     | Query lifecycle, validation, duplicate detection, voting, bookmarking |
+| answerService    | Answer management, comments, helpful workflow, verification           |
+| solutionService  | Automatic solution finalization and cron execution                    |
+| gibberishService | Content quality validation                                            |
+| spamService      | Spam penalty enforcement                                              |
+| vectorService    | Semantic similarity search and duplicate detection                    |
+
+---
