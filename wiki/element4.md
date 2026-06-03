@@ -44,593 +44,417 @@
 
 ## 1. Overview
 
-The FAQ Knowledge Base and AI Chatbot form **Pillar 1** of the platform's three-pillar architecture. Their purpose is to surface definitive, curated answers to users as quickly as possible — first from the canonical FAQ, then (with the user's consent) from resolved community threads — before asking the user to raise a new query.
+Finding the right answer should not require users to browse dozens of pages, create duplicate questions, or wait hours for a response.
 
-The system has three interlocking parts:
+The FAQ Knowledge Base and AI Chatbot were designed to solve this problem by creating a single intelligent entry point for information discovery across the platform.
 
-- **The FAQ store** — a MongoDB-backed collection of curated entries organized by category, each carrying a 768-dimensional embedding vector for semantic retrieval.
-- **The RAG chatbot** — a consent-gated, three-tier retrieval-augmented generation pipeline that grounds every answer in either a FAQ entry or a resolved community Q&A thread before composing a response with the AI model, with a hard fallback when neither source has a confident match.
-- **The AI boundary module** (`server/config/ai.js`) — the single file in the entire codebase permitted to call the AI provider. It switches between a deterministic offline mock and the live Gemini API based solely on whether `AI_API_KEY` is set, making the system fully functional with zero cost or network access in development, CI, and demo environments.
+Together, they form the first pillar of the system's knowledge-sharing architecture. Their goal is simple: help users find trusted answers as quickly as possible while reducing repetitive questions and improving the overall support experience.
 
-Both the FAQ and the chatbot share the same underlying vector infrastructure: `vectorService.cosineSimilarity` is the comparison function, and `ai.embed` is the single embedding call site.
+Rather than relying on traditional keyword searches alone, the platform combines curated FAQ content, semantic search, and AI-assisted guidance to understand what users are asking, even when questions are phrased differently.
 
 ---
 
-## 2. Data Model — FaqEntry
+## What Makes This System Different?
 
-**File:** `server/models/FaqEntry.js`
+Most help systems force users to know the exact keywords needed to find an answer. If the wording is slightly different, relevant information is often missed.
 
-```
-faq_entries collection
-├── category          String  (required, indexed)
-├── question          String  (required)
-├── answer            String  (required)
-├── sort_order        Number  (default 0 — controls display order within a category)
-├── source            Enum    'admin' | 'qa'
-├── source_query_id   ObjectId → Query  (set when source = 'qa')
-├── last_accessed_at  Date    (LRU tracking)
-├── access_count      Number  (LRU tracking)
-├── is_outdated       Boolean (admin-flaggable)
-├── embedding         [Number, 768 dims]  (hidden from API responses)
-├── is_deleted        Boolean (soft-delete)
-├── deleted_at        Date
-└── timestamps        (createdAt, updatedAt)
-```
+This platform takes a different approach.
 
-**Text index:** MongoDB text index on `{ question: 'text', answer: 'text' }` supplements full-text queries; however, all FAQ searches in production run through the semantic embedding path, not this index directly.
+### Intelligent Knowledge Discovery
 
-**Embedding validation:** The schema validator enforces `embedding.length === 768` (the value of `EMBEDDING_DIMS`). Any attempt to store an incorrectly sized vector is rejected at the Mongoose layer.
+The FAQ system understands the meaning behind a question rather than matching words alone. This allows users to search naturally and still receive relevant results, even when their wording differs from the original FAQ article.
 
-**Embedding exposure:** The `strip()` helper in `faqService.js` removes two internal fields from every object returned to callers — `embedding` (the raw vector) and `__v` (Mongoose's internal version key). The actual implementation is:
+### AI-Assisted Guidance
 
-```js
-const strip = ({ embedding, __v, ...rest }) => ({ ...rest, id: rest._id });
-```
+When users cannot immediately find an answer, the chatbot acts as a guided assistant. Instead of generating information from the internet, it searches trusted knowledge already available within the platform and presents it in a conversational format.
 
-All remaining fields — including `_id` itself — are spread into the returned object, with `id` added as an alias for `_id`. The raw embedding vector is never sent over the API.
+### Community-Powered Learning
+
+Knowledge does not remain limited to administrator-created articles. Valuable solutions discovered through community discussions can later be promoted into official FAQ entries, allowing the knowledge base to grow naturally over time.
+
+### Reliable and Transparent Answers
+
+Every chatbot response is grounded in information that already exists within the platform. Users are shown where answers come from, helping build trust and ensuring that responses remain accurate and verifiable.
 
 ---
 
-## 3. Embeddings and Cosine Similarity
+## The Three Core Components
 
-**File:** `server/services/vectorService.js`
+The FAQ and chatbot ecosystem is built around three interconnected components that work together to deliver fast and reliable answers.
 
-Semantic similarity across the entire platform — for FAQ search, chatbot retrieval, duplicate query detection, and query amalgamation — is computed by a single pure function:
+### The FAQ Knowledge Base
 
-```js
-export function cosineSimilarity(a, b) {
-  // dot(a, b) / (||a|| * ||b||)
-  // Returns 0 if either argument is malformed or zero-norm.
-}
-```
+This is the platform's central source of curated information.
 
-The function iterates once over both vectors accumulating the dot product and both squared norms, then divides. It short-circuits to `0` for malformed inputs (non-array, mismatched lengths, zero-norm denominator) rather than throwing, so callers do not need to guard against edge-case vectors.
+Administrators create and maintain FAQ articles covering common questions, policies, procedures, and frequently requested guidance. These articles are organized into categories and serve as the first source of truth whenever users search for help.
 
-**Why in-app cosine similarity instead of a dedicated vector store?**
+### The AI Chatbot
 
-Per the project constraints and architecture decisions (`PLANNING.md §3`), a dedicated vector index (e.g. MongoDB Atlas Vector Search, pgvector, Pinecone) is explicitly deferred to production. For MVP corpus sizes — a few hundred FAQ entries, thousands of community queries at most — serialized in-app cosine comparison over all documents has negligible latency, requires zero additional infrastructure, and is trivially replaceable: callers pass embeddings and receive scores; the comparison function is a one-file swap. See [Section 14](#14-production-swap-guide) for the upgrade path.
+The chatbot provides a conversational way to access knowledge.
 
-`vectorService.js` also exports `findSimilarQueries`, used by the duplicate-detection and amalgamation subsystems, but the FAQ and chatbot pipelines call `cosineSimilarity` directly after fetching candidates themselves.
+Instead of manually browsing categories, users can ask questions in natural language. The chatbot searches available information, identifies relevant content, and presents responses in a simple and user-friendly format.
 
----
+### The AI Intelligence Layer
 
-## 4. FAQ Service
+Behind both the FAQ system and chatbot is a shared intelligence layer responsible for understanding content and comparing similarities between questions.
 
-**File:** `server/services/faqService.js`
+This layer powers semantic search, chatbot retrieval, duplicate detection, and future AI-driven features across the platform.
 
-This is the authoritative service layer for all FAQ operations. No controller, route, or other service reaches into the `FaqEntry` model directly — all reads and writes go through these exported functions.
-
-### 4.1 Listing FAQs — Category Grouping
-
-```js
-export async function listFaqs({ category } = {})
-```
-
-Fetches all non-deleted entries, optionally filtered to a single category. The query sorts by `{ category: 1, sort_order: 1, createdAt: 1 }` so entries within a category appear in admin-specified order (via `sort_order`), with creation-time as a stable tiebreaker. Results are then grouped in a single in-memory pass into the shape:
-
-```json
-[
-  { "category": "Account", "items": [ ... ] },
-  { "category": "Billing", "items": [ ... ] }
-]
-```
-
-This array is what the `Faq.jsx` page receives and renders as category accordion sections. The `category` query parameter uses `String(category)` coercion to prevent NoSQL operator injection before passing to the Mongoose filter.
-
-### 4.2 Hybrid Semantic Search
-
-```js
-export async function searchFaqs(query)
-```
-
-Takes a user-supplied query string and returns up to 10 ranked FAQ entries. The scoring is a hybrid of two signals:
-
-**Semantic score** — The query string is embedded via `ai.embed(q)` to produce a 768-dimensional query vector. Each stored FAQ entry's `embedding` field is compared against this vector using `cosineSimilarity`. Entries without an embedding receive a semantic score of `0`.
-
-**Keyword boost** — If the lower-cased query string is a substring of either the entry's `question` or `answer` field, `0.3` is added to the entry's score. This ensures that obvious exact-phrase matches are never buried below semantically proximate but less relevant entries.
-
-**Filtering and ranking** — Entries with a combined score ≤ `0.05` are discarded. The remainder are sorted descending and the top 10 are returned, each decorated with a `score` field (rounded to 3 decimal places) for transparency.
-
-The search is stateless and public — no authentication is required.
-
-### 4.3 Creating FAQ Entries
-
-```js
-export async function createFaq({ category, question, answer, sort_order, source, sourceQueryId, force })
-```
-
-All three required fields (`category`, `question`, `answer`) are validated before any AI call is made. The combined text `"${question}\n\n${answer}"` is embedded via `ai.embed` and stored in the `embedding` field.
-
-**Near-duplicate guard (admin-authored entries only):** When `source === 'admin'` and `force` is not set, the service fetches all existing non-deleted entries and checks every one for:
-
-- An exact case-insensitive question match, or
-- A cosine similarity ≥ `FAQ_DUPLICATE_THRESHOLD` (0.95) between the new entry's embedding and the existing entry's embedding.
-
-If either condition is met, a `409 Conflict` is thrown with a `duplicate: true` payload that includes the matching entry's `id`, `question`, and similarity `score`. The admin UI can surface this to the operator and offer a `force: true` override to create the entry anyway.
-
-Entries promoted from Q&A (`source === 'qa'`) bypass this guard intentionally — the promotion flow (see §4.5) has its own idempotency check.
-
-### 4.4 Updating and Soft-Deleting Entries
-
-**`updateFaq(id, fields)`** — Applies partial updates to an entry. If the `question` or `answer` text changes, the embedding is automatically recomputed (`ai.embed(faqText(question, answer))`), keeping the vector in sync with the content. Changes to `category`, `sort_order`, and `is_outdated` never trigger re-embedding.
-
-**`setFaqOutdated(id, isOutdated)`** — A dedicated toggle to mark or unmark an entry as outdated. Used by the admin FAQ manager when content becomes stale without requiring a full edit.
-
-**`deleteFaq(id)`** — Soft-deletes the entry by setting `is_deleted = true` and `deleted_at = now`. The record is retained in the database for audit purposes and is excluded from all `listFaqs` and `searchFaqs` results by the `{ is_deleted: false }` filter.
-
-### 4.5 Promoting a Resolved Q&A to FAQ
-
-```js
-export async function promoteQueryToFaq(queryId)
-```
-
-This function is the bridge between Pillar 3 (the Q&A forum) and Pillar 1 (the FAQ). It allows an admin to "graduate" a community question into the curated FAQ once the community has produced a high-quality answer.
-
-**Preconditions checked:**
-
-1. The query must exist and not be soft-deleted.
-2. The query must have an `accepted_answer_id` (only resolved questions qualify — unresolved questions are rejected with a `400`).
-3. The accepted answer must still exist and not be deleted.
-4. No prior promotion of this query may exist — re-promoting the same query returns a `409`.
-
-When all checks pass, `createFaq` is called with:
-- `category` — taken directly from the query's `category` field.
-- `question` — the query's `title`.
-- `answer` — the accepted answer's `body`.
-- `source: FAQ_SOURCE.QA` — flags the entry as community-sourced so the UI can display a "Promoted from Q&A" badge.
-- `sourceQueryId` — the originating query's `_id`, stored for traceability.
-
-Because `source` is `'qa'`, the near-duplicate guard is skipped. The promoted entry gets its own fresh embedding computed from the question/answer text.
+By centralizing these capabilities, the system remains consistent, scalable, and easier to maintain.
 
 ---
 
-## 5. FAQ Routes and Access Control
+## A Knowledge System That Improves Over Time
 
-**File:** `server/routes/faqRoutes.js`
+One of the most valuable aspects of the platform is its ability to continuously expand its knowledge.
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/faq` | Public | List all entries grouped by category |
-| `GET` | `/api/faq/search` | Public | Semantic + keyword search (`?q=`) |
-| `POST` | `/api/faq` | Admin only | Create a new FAQ entry |
-| `POST` | `/api/faq/promote/:queryId` | Admin only | Promote a resolved query to FAQ |
-| `PATCH` | `/api/faq/:id` | Admin only | Edit an existing FAQ entry |
-| `POST` | `/api/faq/:id/outdated` | Admin only | Toggle outdated flag |
-| `DELETE` | `/api/faq/:id` | Admin only | Soft-delete an entry |
+As users ask questions and the community contributes solutions, successful discussions can become part of the official FAQ collection.
 
-Public reads are unauthenticated by design. All write operations require a valid JWT with `role: 'admin'` — the `auth` middleware verifies the token and the `admin` middleware checks the role, both applied as Express middleware before the controller.
+This creates a continuous cycle of improvement:
 
----
+1. Users ask questions.
+2. Answers are discovered or contributed.
+3. Valuable solutions are preserved.
+4. Future users benefit instantly.
 
-## 6. FAQ Page — Frontend
+Over time, the knowledge base becomes richer, search becomes more effective, and users spend less time searching for information.
 
-**File:** `client/src/pages/Faq.jsx`
+The result is a self-improving support ecosystem that combines curated knowledge, community expertise, and AI-powered discovery into a single experience.
+## 6. FAQ Experience for Users
 
-### 6.1 Category Accordions
+Finding answers should feel simple, not overwhelming.
 
-On mount, the page calls `listFaqs()` via the `GET /api/faq` endpoint and stores the returned `groups` array in state. Each group becomes a collapsible category section:
+The FAQ experience is designed to help users quickly navigate information without needing technical knowledge or advanced search skills. Instead of presenting a large list of articles, the platform organizes information into structured categories that are easy to browse and understand.
 
-- A category header button toggles the `openCats` state entry for that category.
-- The **first category is opened by default** on load (`setOpenCats({ [data[0].category]: true })`).
-- Within an open category, at most `PREVIEW_COUNT` (5) items are shown initially. A "View all N articles" button expands the full list; a second click collapses back to the preview.
-- Each individual FAQ item is a `FaqItem` component — a button that reveals the answer panel on click by toggling `openItems` state.
-
-**Promoted entries** are visually distinguished: `FaqItem` renders a `"Promoted from Q&A"` chip alongside the question text when `entry.source === 'qa'`.
-
-### 6.2 Live Semantic Search
-
-When the user types in the search bar, a 300ms debounced effect fires `searchFaqs(term)` against `GET /api/faq/search?q=`. Results replace the accordion view entirely. A new search resets `forumResults` to `null` (meaning "never checked") so any prior forum opt-in is invalidated.
-
-Clicking "Clear" calls `setResults(null)` and `setForumResults([])` (an empty array, meaning "checked and found nothing"). In practice the entire results block disappears when `results` is `null`, so the visual effect is the same — the category accordion is restored. The distinction between `null` and `[]` matters for the conditional rendering logic: `null` shows the consent prompt when search finds nothing; `[]` renders the empty community-results state.
-
-The search hint explicitly tells the user that semantic search is active, encouraging natural-language queries ("how do I report data?") rather than just keyword lookups.
-
-### 6.3 Consent-Gated Forum Fallback
-
-If the semantic search returns zero FAQ results, the page shows a consent prompt: **"Not in the FAQ. Do you want me to check in the forum?"** The community database is never queried until the user clicks "Yes, check the forum." This mirrors the chatbot's `await_forum` tier and ensures the platform never implicitly searches user-generated content.
-
-Upon consent, `searchQueries(term)` is called against the community forum API. Results are displayed as a linked list of query titles with status badges. If the forum also returns nothing, the user is directed to raise a new query via `/ask`.
+Users can expand categories, explore related topics, and read answers directly within the page without navigating through multiple screens. This creates a smoother experience and helps users find information faster.
 
 ---
 
-## 7. Chatbot Service — Tiered Grounded RAG Pipeline
+### Organized by Categories
 
-**File:** `server/services/chatbotService.js`
+All FAQ articles are grouped into clearly defined categories, making information easier to browse.
 
-The chatbot implements a **consent-gated three-tier RAG pipeline**: Tier 1 answers from the curated FAQ, Tier 2 (after explicit user consent) searches resolved community Q&A, and Tier 3 is a hard fallback when neither source returns a confident match. Every answer in Tiers 1 and 2 is grounded in retrieved documents from the platform's own knowledge base before being passed to the AI model for composition. The AI never answers from general knowledge alone.
-
-The key constant governing retrieval confidence is `CHATBOT_MATCH_THRESHOLD = 0.3` from `constants.js`. A retrieved document must exceed this cosine similarity score to be used as context.
-
-### 7.1 Tier 1 — Curated FAQ Answer
-
-On every new question (when `checkForum` is `false`), the service:
-
-1. Embeds the user's question via `ai.embed(text)`.
-2. Fetches all non-deleted `FaqEntry` documents, selecting only `question`, `answer`, and `embedding`.
-3. Finds the single best-scoring FAQ entry using `bestMatch()`, which scans the list computing `cosineSimilarity(qEmbed, doc.embedding)` for each entry.
-4. If `faqHit.score >= CHATBOT_MATCH_THRESHOLD`, the service calls `compose()` with a grounded prompt built from the FAQ entry's question and answer text (see §7.5). The response carries:
-   - `source_tier: 'faq'`
-   - `citations: [{ kind: 'faq', ref_id: entry._id, title: entry.question }]`
-
-### 7.2 Tier 2 — Consent and Resolved Community Q&A
-
-If Tier 1 finds no confident FAQ match, the service does **not** silently fall through to the community database. Instead it returns:
-
-```json
-{
-  "content": "I couldn't find this in the FAQ. Do you want me to check the community forum for a related discussion?",
-  "source_tier": "await_forum",
-  "awaiting_forum": true,
-  "citations": []
-}
-```
-
-The client (`Chatbot.jsx`) stores the original question in `pending` state and renders "Yes, check the forum" / "No, thanks" buttons alongside the message.
-
-When the user consents, the client re-calls `POST /api/chatbot/ask` with `check_forum: true` and the same `session_token`. The service then:
-
-1. Fetches all non-deleted, accepted, and embedding-carrying `Query` documents.
-2. Finds the best-scoring resolved query via `bestMatch()`.
-3. If `qHit.score >= CHATBOT_MATCH_THRESHOLD`, fetches the accepted answer body and calls `compose()` with a grounded prompt. The response carries:
-   - `source_tier: 'community'`
-   - `citations: [{ kind: 'query', ref_id: query._id, title: query.title }]`
-
-The citation links directly to the forum thread (`/queries/:ref_id`), so the user can follow up in the community.
-
-### 7.3 Tier 3 — Graceful Fallback
-
-If Tier 2 also finds no match above the threshold, the service returns:
-
-```
-"I couldn't find this in the FAQ or the community forum. Try rephrasing your question, browse the FAQ, or raise a query so the community can help."
-```
-
-with `source_tier: 'fallback'` and an empty `citations` array. This message is hard-coded in the service (`FALLBACK` constant) and does not involve any AI call — it is always available even when the AI provider is down.
-
-### 7.4 Session Management
-
-Every chatbot exchange is persisted to a `ChatbotSession` document.
-
-**Session token:** Tokens are minted server-side using `crypto.randomUUID()`. The client never sets its own token — a client-supplied `session_token` is only used to look up an existing session. This prevents session fixation attacks.
-
-**Session ownership:** An anonymous session (no `user_id`) can be claimed by a logged-in user on first access (the `user_id` is written on reuse). A session owned by a specific user is rejected if a different authenticated user presents its token — the service starts a fresh session instead. Unauthenticated users can read any anonymous session they hold the token for.
-
-**Message persistence:** Each turn appends two messages to `session.messages`: one `role: 'user'` and one `role: 'assistant'`. The assistant message stores `source_tier` and `citations` so the client can reconstruct the full annotated history on session restore. On the consent step, the user turn is recorded as "Yes, check the forum." rather than the original question, matching the actual consent interaction.
-
-**Session restore:** On panel open, `Chatbot.jsx` calls `GET /api/chatbot/session/:token` to hydrate prior messages into local state.
-
-### 7.5 Prompt Construction and Grounded Composition
-
-The `buildPrompt(question, contextLabel, contextText)` helper produces:
-
-```
-You are the FAQ Platform assistant. Answer the user using ONLY the context below.
-Be concise and accurate. If the context does not fully answer, say what is missing.
-
-Context (<contextLabel>):
-<contextText>
-
-User question: <question>
-```
-
-The instruction "ONLY the context below" is intentional — it prevents the model from supplementing with general knowledge, keeping answers grounded exclusively in platform content.
-
-The `compose(prompt, grounded)` function calls `ai.chat(prompt, grounded)`. The second argument is the raw retrieved text (FAQ answer or community answer body) used as the mock-mode return value and as a fallback if the live call throws or returns an empty string. This means the chatbot always returns a useful, grounded answer even during a provider outage or rate-limit event — it falls back to the raw retrieved text rather than an error message.
+Rather than searching through an unstructured collection of content, users can navigate directly to the topic most relevant to their needs.
 
 ---
 
-## 8. Chatbot Routes and Rate Limiting
+### Quick Article Discovery
 
-**File:** `server/routes/chatbotRoutes.js`
+The interface highlights important information while keeping the page clean and uncluttered.
 
-| Method | Path | Auth | Rate limit |
-|--------|------|------|------------|
-| `POST` | `/api/chatbot/ask` | Optional | `aiLimiter`: 20 requests / 60 s per IP |
-| `GET` | `/api/chatbot/session/:token` | Optional | None |
-
-The chatbot is publicly accessible — authentication is optional (`optionalAuth`). When a valid JWT is present, the session is linked to the authenticated user. Without a token the session remains anonymous.
-
-The `aiLimiter` (20 req/min) is applied to `/ask` because each request may trigger one or two AI calls (an embedding plus a chat completion). The tight budget reflects the Gemini free-tier reality (~10 RPM shared across the whole application).
+Users can expand individual questions to reveal answers only when needed, reducing information overload and improving readability.
 
 ---
 
-## 9. Chatbot Component — Frontend (Chatbot.jsx)
+### Community-Promoted Knowledge
 
-**File:** `client/src/components/Chatbot.jsx`
+Some FAQ articles originate from successful community discussions.
 
-The chatbot renders as a floating action button (`chat-fab`) fixed to the viewport. Clicking it opens a `chat-panel` overlay. The component is mounted globally in `App.jsx` as a sibling to `<AppShell>`, not inside it:
+When a community answer proves valuable enough to become official knowledge, it can be promoted into the FAQ system and displayed alongside administrator-created content.
 
-```jsx
-<>
-  <AppShell>...</AppShell>
-  <Chatbot />   {/* sibling, not child */}
-</>
-```
-
-This placement means the chatbot overlay is always available regardless of which route is active inside the shell. The component listens for a `window` event `'open-chatbot'` so any part of the application (e.g. the Home page's "Ask the Assistant" card) can open it programmatically via `window.dispatchEvent(new Event('open-chatbot'))`.
-
-**State:**
-- `messages` — array of `{ role, content, source_tier, citations }` objects rendered in the panel.
-- `input` — controlled text input.
-- `busy` — disables the send button and input during an in-flight API call.
-- `pending` — stores the original question when the assistant is waiting for forum-search consent (`source_tier === 'await_forum'`). Cleared on consent, decline, or new question.
-
-**Consent flow in the UI:** When the latest assistant message has `source_tier === 'await_forum'` and `pending` is set, the message bubble is followed by two buttons: "Yes, check the forum" (calls `runAsk(pending, true)`) and "No, thanks" (calls `declineForum()`). Declining appends a hard-coded assistant message:
-
-```
-"No problem. You can browse the FAQ or raise a query and the community will help."
-```
-
-with `source_tier: 'fallback'`, and clears `pending`. These consent buttons only appear on the most recent assistant message.
-
-**Source attribution:** Non-fallback, non-consent assistant messages display a `chat-cite` line below the bubble: "Source: FAQ" or "Source: Community Q&A", with a link to the specific FAQ entry title or a clickable `<Link>` to the forum thread (`/queries/:ref_id`) for community citations.
-
-**Session persistence:** The session token is stored in `localStorage` under the key `'chatbotSession'`. On panel open, if a token exists and the messages array is empty, the session history is loaded from the server.
-
-**Source tier labels** are defined as a module-level constant:
-
-```js
-const TIER_LABEL = { faq: 'FAQ', community: 'Community Q&A', ai: 'AI', fallback: '' };
-```
-
-The backend (`chatbotService.js`) returns four `source_tier` values: `'faq'`, `'await_forum'`, `'community'`, and `'fallback'`. The `'ai'` key in `TIER_LABEL` has **no corresponding backend tier** — the service never emits `source_tier: 'ai'`. It is dead/unused code in the frontend constant. The `fallback` and `await_forum` tiers intentionally produce no source attribution label in the UI (empty string and no match respectively).
+This ensures useful community expertise remains accessible long after the original discussion ends.
 
 ---
 
-## 10. The AI Module — Swappable Mock/Live Boundary
+## 7. AI Chatbot Assistant
 
-**File:** `server/config/ai.js`
+While the FAQ provides a traditional way to browse information, some users prefer asking questions directly.
 
-This is the **only file in the entire codebase that imports or calls the AI provider SDK**. No service, controller, model, or job may import `@google/genai` directly. All AI operations — embedding, cheap JSON calls, chat completions — go through the `ai` object exported from this module.
+The AI Chatbot serves as a conversational guide that helps users discover relevant information without manually searching through categories or articles.
 
-This isolation means swapping the AI provider in production is a change to one file and its environment variables, not a codebase-wide refactor.
+Instead of acting as a general-purpose AI, the chatbot focuses exclusively on knowledge that exists within the platform.
 
-### 10.1 Mock Mode
-
-Mock mode is active whenever `AI_API_KEY` is absent or empty:
-
-```js
-get mockMode() {
-  return !this.apiKey;
-}
-```
-
-In mock mode:
-
-- **`ai.embed(text)`** returns a deterministic 768-dimensional vector computed by a hash-based function (`mockEmbed`). Tokens are extracted from the text, each is hashed with a polynomial rolling hash, and the result at `hash % dims` is incremented. The vector is L2-normalized so cosine similarity behaves correctly. The vectors are not semantically meaningful but are stable across runs — the same text always produces the same vector, making tests deterministic.
-- **`ai.cheapJson(prompt, mockResult)`** returns `mockResult` immediately, without any network call.
-- **`ai.chat(prompt, mockText)`** returns `mockText` if provided, otherwise the hard-coded offline message: `"I'm running in offline mode right now, so I can't compose a live answer. Please browse the FAQ or ask the community."`
-
-Mock mode allows the entire platform — including FAQ search, chatbot, and duplicate detection — to run with zero network access and zero quota consumption. This is the default for all local development, CI pipelines, and demo environments without a configured API key.
-
-### 10.2 Live Mode — Gemini via @google/genai
-
-When `AI_API_KEY` is set, the module lazily constructs a `GoogleGenAI` client on the first call and reuses it for all subsequent requests. The SDK is imported dynamically (`await import('@google/genai')`) so it is only loaded when actually needed.
-
-The models used, all configurable via environment variables:
-
-| Purpose | Default model | Env var |
-|---------|--------------|---------|
-| Chat / RAG composition | `gemini-2.5-flash` | `AI_CHAT_MODEL` |
-| Cheap JSON (gibberish, autocorrect) | `gemini-2.5-flash-lite` | `AI_CHEAP_MODEL` |
-| Embeddings | `gemini-embedding-001` | `AI_EMBED_MODEL` |
-| Embedding dimensions | `768` | `AI_EMBED_DIMS` |
-
-The embedding call uses `outputDimensionality: config.ai.embedDims` to request fixed-size vectors, ensuring all stored embeddings across the database are the same length and cosine similarity is always valid.
-
-### 10.3 Request Queue and Exponential Backoff
-
-All live AI calls are serialized through a shared promise chain (`queue`) and wrapped in an exponential backoff retry loop:
-
-- **Serialization:** `enqueue(fn)` chains each new call onto the previous promise. This ensures the application never issues concurrent AI requests that would blow the Gemini free-tier RPM quota (~10 RPM as of Dec 2025).
-- **Backoff:** `withBackoff(fn)` retries up to `MAX_RETRIES` (4) times on `HTTP 429` (rate limit) responses with a delay of `BASE_DELAY_MS * 2^attempt + random(0..200ms)`. Any other error is re-thrown immediately.
-- **Chain resilience:** Failed calls do not poison the queue — `queue = run.catch(() => {})` keeps the chain alive even after a rejection.
-
-This means a transient quota spike degrades gracefully: the call eventually succeeds after backoff, or fails cleanly and allows the `compose()` function in `chatbotService` to return the grounded fallback text.
-
-### 10.4 Public API Surface
-
-```js
-ai.mockMode           // Boolean — true when no API key is set
-ai.embed(text)        // Promise<number[]> — 768-dim vector
-ai.embedBatch(texts)  // Promise<number[][]> — parallel embed (used by seed)
-ai.cheapJson(prompt, mockResult)  // Promise<object> — structured JSON call
-ai.chat(prompt, mockText)         // Promise<string> — chat completion
-```
+This makes responses more reliable, consistent, and easier to verify.
 
 ---
 
-## 11. Key Thresholds and Constants
+### Guided Question Answering
 
-**File:** `server/config/constants.js`
+Users can ask questions in natural language, just as they would when speaking to another person.
 
-| Constant | Value | Where used |
-|----------|-------|------------|
-| `EMBEDDING_DIMS` | `768` | Schema validation, mock embed size, `outputDimensionality` |
-| `CHATBOT_MATCH_THRESHOLD` | `0.3` | Tier 1 and Tier 2 retrieval in `chatbotService` |
-| `FAQ_DUPLICATE_THRESHOLD` | `0.95` | Near-duplicate guard in `createFaq` (admin entries) |
-| `DUPLICATE_SIMILARITY_THRESHOLD` | `0.8` | Community query duplicate detection |
-| `AMALGAMATION_SIMILARITY_THRESHOLD` | `0.6` | Admin amalgamation grouping |
-| `FAQ_SOURCE.ADMIN` | `'admin'` | Manually curated entries |
-| `FAQ_SOURCE.QA` | `'qa'` | Promoted community entries |
-
-All thresholds are centralized in `constants.js` and imported by the services that need them. Tuning similarity cutoffs for production is a constants-file change, not a service-layer change.
+The chatbot interprets the request, searches available knowledge sources, and presents the most relevant information in a conversational format.
 
 ---
 
-## 12. Embedding Refresh Job
+### Knowledge Before Guesswork
 
-**File:** `server/jobs/embeddingRefresh.js`
+The chatbot prioritizes trusted platform content before generating a response.
 
-Over time, query content may be edited in ways that bypass the normal embedding hook (e.g. direct database fixes, model migrations). The `embeddingRefresh` job handles this:
+Rather than inventing answers or relying on information from outside sources, it searches existing knowledge and uses that information as the foundation for every response.
 
-1. Fetches all non-deleted queries.
-2. For each query, computes `SHA-256(title + "\n\n" + body)` and compares it to the stored `embedding_hash`.
-3. If the hash differs, re-embeds the text and updates both `embedding` and `embedding_hash`.
-4. Returns `{ refreshed: N }`.
-
-This job is also the **migration path when the embedding model changes** (e.g. moving from `gemini-embedding-001` to a future model at deployment): clearing `embedding_hash` on all documents causes the job to re-embed everything on its next run. FAQ entries do not participate in this job — their embeddings are updated inline on `updateFaq` when the text changes.
+This helps maintain accuracy and trust.
 
 ---
 
-## 13. End-to-End Flow Diagrams
+### Supporting Self-Service Help
 
-### FAQ Search Flow
+Many users simply want a quick answer without opening multiple pages.
 
-```
-User types in search bar (300ms debounce)
-        │
-        ▼
-GET /api/faq/search?q=<term>
-        │
-        ▼
-faqService.searchFaqs(term)
-  ├── ai.embed(term)  ──► 768-dim query vector
-  ├── FaqEntry.find({ is_deleted: false })
-  └── for each entry:
-        score = cosineSimilarity(qVec, entry.embedding)
-              + (keyword match ? 0.3 : 0)
-        │
-        ▼
-  filter score > 0.05 → sort desc → top 10
-        │
-        ▼
-Client renders accordion of results
-        │
-  [if 0 results]
-        ▼
-  "Not in the FAQ" consent prompt shown
-        │
-  [user clicks "Yes, check the forum"]
-        ▼
-  GET /api/queries/search?q=<term>
-  Results shown as linked list with status badges
-```
-
-### Chatbot RAG Pipeline
-
-```
-User sends message
-        │
-        ▼
-POST /api/chatbot/ask  { message, session_token, check_forum: false }
-        │
-        ▼
-chatbotService.ask()
-  ├── getOrCreateSession()  (server-minted UUID token)
-  ├── ai.embed(message)  ──► qEmbed
-  └── [Tier 1] FaqEntry.find() → bestMatch(qEmbed, faqs)
-          │
-    score ≥ 0.3?
-    ┌──── YES ────────────────────────────────────────────┐
-    │  buildPrompt(msg, 'FAQ entry', faq.question+answer) │
-    │  compose(prompt, faq.answer)                        │
-    │  → { source_tier:'faq', citations:[{kind:'faq'}] }  │
-    └─────────────────────────────────────────────────────┘
-          │
-          NO
-          ▼
-    { source_tier:'await_forum', awaiting_forum:true }
-    Client shows "Yes / No" consent buttons
-          │
-    [user clicks YES]
-          ▼
-POST /api/chatbot/ask  { message, session_token, check_forum: true }
-          │
-          ▼
-    [Tier 2] Query.find(accepted+embedding) → bestMatch(qEmbed)
-          │
-    score ≥ 0.3?
-    ┌──── YES ──────────────────────────────────────────────────┐
-    │  answer = Answer.findById(q.accepted_answer_id)           │
-    │  compose(buildPrompt(msg,'community answer', ...), body)   │
-    │  → { source_tier:'community', citations:[{kind:'query'}] } │
-    └───────────────────────────────────────────────────────────┘
-          │
-          NO
-          ▼
-    { source_tier:'fallback', content: FALLBACK }
-          │
-    session.messages.push(user+assistant turns)
-    session.save()
-```
-
-### Q&A Promotion Flow
-
-```
-Admin views resolved query in AdminFaqManager
-        │
-        ▼
-POST /api/faq/promote/:queryId   (admin JWT required)
-        │
-        ▼
-faqService.promoteQueryToFaq(queryId)
-  ├── Query must exist, not deleted
-  ├── Query must have accepted_answer_id
-  ├── Accepted answer must exist and not be deleted
-  ├── No prior promotion of this queryId
-  └── createFaq({
-        category: query.category,
-        question: query.title,
-        answer:   acceptedAnswer.body,
-        source:   'qa',
-        sourceQueryId: query._id
-      })
-        │
-        ▼
-  ai.embed(question + answer) → embedding stored
-  FaqEntry created with source='qa', source_query_id set
-        │
-        ▼
-Entry appears in FAQ accordion with "Promoted from Q&A" chip
-```
+The chatbot reduces friction by providing immediate assistance and directing users toward relevant resources whenever possible.
 
 ---
 
-## 14. Production Swap Guide
+## 8. Chatbot Access and User Interaction
 
-The codebase is built around two explicitly documented swappable boundaries. Upgrading either in production requires no changes outside their respective single files.
+The chatbot is designed to be available whenever users need assistance.
 
-### Swapping the AI Provider
+Instead of hiding support features deep within the application, the assistant remains accessible throughout the platform, providing a consistent help experience regardless of where users are located.
 
-Edit `server/config/ai.js` only:
+---
 
-1. Change the import to the new provider's SDK.
-2. Re-implement `ai.embed()`, `ai.chat()`, and `ai.cheapJson()` using the new SDK.
-3. Update `config.ai` fields in `server/config/env.js` to add any new environment variables.
-4. Keep the `mockMode` getter — it must remain functional for CI.
+### Always Within Reach
 
-All callers (`faqService`, `chatbotService`, `gibberishService`, `spamService`, `embeddingRefresh`) are unaffected because they only use the `ai.*` API surface.
+The chatbot can be opened from anywhere within the application, allowing users to seek help without interrupting their current task.
 
-### Swapping the Embedding Model
+This creates a more seamless support experience and encourages knowledge discovery throughout the platform.
 
-If moving to a model with a different output dimension:
+---
 
-1. Update `EMBEDDING_DIMS` in `constants.js` and `AI_EMBED_DIMS` in environment configuration.
-2. Clear `embedding_hash` on all `Query` documents and delete all `FaqEntry` embeddings.
-3. Run `embeddingRefresh` to re-embed queries; re-run the FAQ seed or `updateFaq` for FAQ entries.
-4. All similarity thresholds continue to work — cosine similarity is dimension-agnostic.
+### Conversational User Experience
 
-### Upgrading to a Dedicated Vector Index
+Interactions are presented in a familiar chat-style interface that feels natural and approachable.
 
-Replace the body of `vectorService.js` with calls to the vector store's SDK (Atlas Vector Search, pgvector, etc.). The public function signatures — `cosineSimilarity(a, b)` and `findSimilarQueries(embedding, opts)` — must be preserved. Callers in `faqService` that call `cosineSimilarity` inline (rather than via `findSimilarQueries`) may need to be updated to delegate the search to the service layer, but the service contracts remain the same.
+Users can ask follow-up questions, review previous responses, and continue conversations without repeatedly searching for information.
+
+---
+
+### Transparent Sources
+
+Whenever the chatbot provides an answer, users can see where the information originated.
+
+Whether the answer comes from an FAQ article or a community discussion, the source remains visible, helping users understand and trust the information being provided.
+
+---
+
+## 9. Conversation History and Knowledge Continuity
+
+Support conversations often span multiple questions and interactions.
+
+To provide a smoother experience, the platform remembers ongoing conversations and allows users to continue where they left off.
+
+This creates a sense of continuity and prevents users from repeating the same information multiple times.
+
+---
+
+### Remembering Previous Interactions
+
+When users return to the chatbot, previous messages can be restored, allowing them to continue existing discussions rather than starting over.
+
+This makes longer conversations easier to manage and improves overall usability.
+
+---
+
+### Building Context Over Time
+
+By maintaining conversation history, the chatbot can present interactions in a logical sequence.
+
+Users can review earlier answers, revisit recommendations, and understand how previous questions relate to current ones.
+
+---
+
+### A More Personalized Experience
+
+Persistent conversations create a more natural support experience and make the chatbot feel less like a simple search tool and more like an ongoing assistant.
+
+---
+
+## 10. AI Integration and System Intelligence
+
+Behind the FAQ system and chatbot lies a shared intelligence layer that powers search, retrieval, and content understanding across the platform.
+
+Rather than embedding AI functionality throughout the application, all intelligence features are managed through a centralized integration layer.
+
+This design keeps the platform organized, maintainable, and adaptable to future improvements.
+
+---
+
+### One Intelligence Layer for Everything
+
+The same AI infrastructure supports multiple platform features, including FAQ search, chatbot retrieval, duplicate detection, and content recommendations.
+
+Using a shared foundation ensures that all intelligent features behave consistently.
+
+---
+
+### Flexible by Design
+
+Technology evolves quickly, and AI capabilities continue to improve.
+
+By keeping AI functionality isolated within a dedicated layer, the platform can adopt new models, providers, or improvements without requiring major changes to the rest of the system.
+
+---
+
+### Reliable in Any Environment
+
+The platform is designed to operate in both development and production environments.
+
+This allows testing, demonstrations, and development work to continue even when live AI services are unavailable, ensuring the system remains dependable under different conditions.
+
+---
+
+### Building for the Future
+
+The intelligence layer provides a foundation for future AI-powered capabilities.
+
+As the platform grows, new features can build upon the same infrastructure without requiring a complete redesign, helping Curio remain scalable and future-ready.
+## 11. Platform Intelligence Settings
+
+Every intelligent platform relies on a set of carefully designed rules that help it make consistent decisions.
+
+Rather than treating every search, chatbot request, or content comparison differently, the platform uses shared intelligence settings that guide how information is organized, ranked, and presented to users.
+
+This ensures that all knowledge-related features work together seamlessly and deliver a consistent experience across the platform.
+
+---
+
+### Consistent Search Standards
+
+When the platform evaluates content, it follows a common set of rules to determine relevance and similarity.
+
+These standards help ensure that users receive accurate search results regardless of whether they are searching the FAQ, interacting with the chatbot, or exploring community discussions.
+
+---
+
+### Preventing Duplicate Knowledge
+
+A growing knowledge base can quickly become cluttered if similar content is allowed to accumulate unchecked.
+
+The platform uses intelligent comparison rules to identify highly similar entries and encourage the creation of a cleaner, more organized knowledge repository.
+
+This helps users find the right information faster while reducing confusion caused by duplicate content.
+
+---
+
+### Shared Intelligence Across Features
+
+Instead of maintaining separate logic for every feature, the platform uses a common intelligence layer.
+
+This allows search, chatbot retrieval, and content management systems to operate using the same understanding of relevance and similarity, creating a more unified user experience.
+
+---
+
+## 12. Keeping Knowledge Fresh
+
+Knowledge is constantly evolving.
+
+Questions change, answers improve, and new information becomes available over time. A knowledge platform must continuously adapt to these changes to remain useful and accurate.
+
+To support this, the platform includes automated processes that help keep search intelligence aligned with the latest content.
+
+---
+
+### Adapting to Content Changes
+
+When important information is updated, the platform refreshes its understanding of that content.
+
+This ensures that future searches and chatbot interactions continue to reflect the most current version of the knowledge base.
+
+Users benefit from more accurate results without needing to know that maintenance is happening behind the scenes.
+
+---
+
+### Reducing Administrative Work
+
+Manually updating search intelligence would be time-consuming and error-prone.
+
+By automating this process, the platform reduces maintenance effort while ensuring that content remains searchable and relevant as the system grows.
+
+---
+
+### Supporting Long-Term Accuracy
+
+As more articles and discussions are added, maintaining accuracy becomes increasingly important.
+
+The refresh process helps preserve the quality of search results over time, ensuring that users continue to receive reliable information even as the knowledge base expands.
+
+---
+
+## 13. How Everything Works Together
+
+The FAQ Knowledge Base and AI Chatbot are designed to function as a connected knowledge ecosystem.
+
+Rather than operating as separate tools, they work together to guide users toward the most relevant and trustworthy information available.
+
+Every interaction follows a simple philosophy: provide official knowledge first, then expand to community knowledge when needed.
+
+---
+
+### Starting with Trusted Knowledge
+
+When a user searches for help, the platform first looks for answers within the curated FAQ collection.
+
+Because these articles are reviewed and maintained, they serve as the most reliable source of information available on the platform.
+
+Whenever a suitable FAQ article exists, users can quickly find what they need without creating a new discussion.
+
+---
+
+### Expanding to Community Discussions
+
+Not every question has an official FAQ article.
+
+When the knowledge base cannot provide a suitable answer, the platform can explore relevant community discussions to uncover additional solutions and experiences.
+
+This allows users to benefit from the collective expertise of the community while still maintaining transparency about where information originates.
+
+---
+
+### Learning from Community Success
+
+One of the platform's most valuable capabilities is its ability to transform successful community solutions into permanent knowledge.
+
+When a discussion produces a particularly useful answer, administrators can promote that solution into the FAQ system.
+
+This allows valuable knowledge to remain accessible long after the original conversation has ended.
+
+---
+
+### A Self-Improving Knowledge Ecosystem
+
+Over time, questions lead to discussions, discussions produce solutions, and solutions become part of the knowledge base.
+
+This continuous cycle helps the platform grow smarter and more useful with every interaction.
+
+As the community contributes new knowledge, future users benefit from faster access to reliable answers.
+
+---
+
+## 14. Designed for the Future
+
+Technology continues to evolve, and successful platforms must be able to evolve alongside it.
+
+The knowledge platform has been designed with flexibility and scalability in mind, ensuring that future improvements can be introduced without disrupting existing functionality.
+
+---
+
+### Flexible AI Integration
+
+Artificial intelligence capabilities are managed through a dedicated integration layer rather than being embedded throughout the application.
+
+This makes it easier to adopt new AI technologies, improve existing capabilities, or switch providers in the future while minimizing the impact on the rest of the system.
+
+---
+
+### Scalable Search Infrastructure
+
+As the knowledge base grows, search requirements naturally become more demanding.
+
+The platform's architecture supports future enhancements that can improve search speed, relevance, and scalability while preserving the familiar experience users already understand.
+
+---
+
+### Supporting Community Growth
+
+As more users join the platform and contribute knowledge, the system can continue expanding without losing structure or usability.
+
+The separation between knowledge management, search intelligence, and chatbot assistance helps ensure that each component can evolve independently while continuing to work together.
+
+---
+
+### Building Long-Term Value
+
+Every FAQ article, community discussion, and chatbot interaction contributes to a growing body of knowledge.
+
+Over time, this creates a richer and more valuable ecosystem that benefits both new and experienced users.
+
+The result is a platform that becomes increasingly useful as its community grows and its knowledge base expands.
