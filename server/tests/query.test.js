@@ -172,13 +172,42 @@ describe('query intake', () => {
     expect(new Date(res.body.query.joining_date).toISOString().slice(0, 10)).toBe('2024-01-15');
   });
 
-  test('grammar check returns a tidied suggestion', async () => {
+  test('refine with AI returns a tidied suggestion', async () => {
     const { token } = await makeUser();
-    const res = await authed(request(app).post('/api/queries/check-grammar'), token).send({
+    const res = await authed(request(app).post('/api/queries/refine'), token).send({
       text: 'how do i reset my password',
     });
     expect(res.status).toBe(200);
     expect(res.body.has_changes).toBe(true);
     expect(res.body.corrected).toBe('How do I reset my password.');
+  });
+
+  test('blocks an unfinished question without a spam strike', async () => {
+    const { token, user } = await makeUser();
+    const res = await authed(request(app).post('/api/queries'), token).send({
+      ...goodQuery,
+      title: 'Help',
+      body: 'thanks',
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.details.incomplete).toBe(true);
+    expect(res.body.details.reasons.length).toBeGreaterThan(0);
+
+    // Unlike gibberish, an honest unfinished post is not a spam strike.
+    const dbUser = await User.findById(user.id);
+    expect(dbUser.spam_flag_count ?? 0).toBe(0);
+  });
+
+  test('flags a blocked gibberish attempt to the moderation queue', async () => {
+    const { token } = await makeUser();
+    const res = await authed(request(app).post('/api/queries'), token).send({
+      title: 'asdf qwer zxcv',
+      body: 'asdfgh qwerty zxcvbn hjkl bnm asdf qwer zxcv hjkl',
+    });
+    expect(res.status).toBe(422);
+
+    const flagged = await ModerationQueue.find({ type: 'gibberish' });
+    expect(flagged).toHaveLength(1);
+    expect(String(flagged[0].reason)).toContain('Gibberish');
   });
 });
