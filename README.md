@@ -1,4 +1,4 @@
-<p align="right"><a href="#team"><b>👥 Team →</b></a></p>
+<p align="right"><a href="#team"><b> Team →</b></a></p>
 
 <div align="center">
 
