@@ -7,6 +7,7 @@ import { ModerationQueue } from '../models/ModerationQueue.js';
 import { ai } from '../config/ai.js';
 import { ApiError } from '../utils/ApiError.js';
 import { detectGibberish } from './gibberishService.js';
+import { detectIncomplete } from './incompleteService.js';
 import { recordSpamStrike } from './spamService.js';
 import { findSimilarQueries, cosineSimilarity } from './vectorService.js';
 import * as taxonomyService from './taxonomyService.js';
@@ -108,23 +109,43 @@ async function embedFor(title, body) {
 
 /**
  * Create a query through the full quality-gated intake flow:
- * gibberish gate → embed → duplicate gate → persist (+ moderation flag).
- * Throws ApiError(422) on gibberish, ApiError(409) on an un-acknowledged duplicate.
+ * gibberish gate → unfinished-question gate → embed → duplicate gate →
+ * persist (+ moderation flag).
+ * Throws ApiError(422) on gibberish or an unfinished question, ApiError(409)
+ * on an un-acknowledged duplicate.
  */
 export async function createQuery(user, payload, screenshots = []) {
   const title = String(payload.title ?? '').trim();
   const body = String(payload.body ?? '').trim();
   if (!title || !body) throw ApiError.badRequest('Title and body are required');
 
-  // Gate 1 — gibberish (runs first so spam protection isn't bypassed).
+  // Gate 1 — gibberish (runs first so spam protection isn't bypassed). A blocked
+  // attempt earns a spam strike AND is flagged to the moderation queue so admins
+  // can see who is repeatedly tripping the filter.
   const gib = await detectGibberish(`${title} ${body}`);
   if (gib.is_gibberish) {
     const strike = await recordSpamStrike(user, 'Gibberish submission blocked');
+    await ModerationQueue.create({
+      type: MODERATION_TYPE.GIBBERISH,
+      raised_by: user._id,
+      reason: `Gibberish submission blocked: "${title}". ${(gib.reasons ?? []).join('; ')}`.slice(0, 500),
+    });
     throw ApiError.unprocessable('This submission looks like gibberish and was blocked.', {
       gibberish: true,
       reasons: gib.reasons,
       ...strike,
     });
+  }
+
+  // Gate 2 — unfinished/incomplete question. Unlike gibberish this is an honest
+  // mistake (a half-typed or cut-off post), so we block it WITHOUT a spam strike
+  // and tell the asker what to finish.
+  const incomplete = await detectIncomplete(title, body);
+  if (incomplete.is_incomplete) {
+    throw ApiError.unprocessable(
+      'This question looks unfinished. Add a bit more detail and a clear ask before posting.',
+      { incomplete: true, reasons: incomplete.reasons },
+    );
   }
 
   // A joining date is mandatory — no posting without it.
@@ -429,6 +450,13 @@ export async function updateQuery(user, id, payload) {
         ...strike,
       });
     }
+    const incomplete = await detectIncomplete(title, body);
+    if (incomplete.is_incomplete) {
+      throw ApiError.unprocessable(
+        'This edit leaves the question unfinished. Add a bit more detail and a clear ask.',
+        { incomplete: true, reasons: incomplete.reasons },
+      );
+    }
   }
 
   doc.title = title;
@@ -550,8 +578,8 @@ export async function restoreQuery(user, id) {
   return { ok: true };
 }
 
-// Deterministic offline grammar tidy — used as the mock-mode result so the
-// "Check grammar" feature still does something useful with no AI key.
+// Deterministic offline tidy — used as the mock-mode result so the
+// "Refine with AI" feature still does something useful with no AI key.
 function offlineAutocorrect(text) {
   let corrected = text.replace(/\s+/g, ' ').trim();
   corrected = corrected.replace(/\bi\b/g, 'I');
@@ -564,21 +592,21 @@ function offlineAutocorrect(text) {
   return { corrected, changes };
 }
 
-function grammarPrompt(text) {
+function refinePrompt(text) {
   return [
-    'Fix grammar, spelling and clarity of the text below WITHOUT changing its meaning.',
+    'Refine the text below for grammar, spelling and clarity WITHOUT changing its meaning.',
     'Respond ONLY as JSON: {"corrected": string, "changes": [{"type": string, "note": string}]}.',
     '',
     `Text:\n"""${text.slice(0, 4000)}"""`,
   ].join('\n');
 }
 
-/** Opt-in grammar/clarity check. Returns the corrected text + a change list. */
-export async function checkGrammar(text) {
+/** Opt-in "Refine with AI" pass. Returns the refined text + a change list. */
+export async function refineText(text) {
   const input = String(text ?? '').trim();
   if (!input) throw ApiError.badRequest('Text is required');
 
-  const result = await ai.cheapJson(grammarPrompt(input), offlineAutocorrect(input));
+  const result = await ai.cheapJson(refinePrompt(input), offlineAutocorrect(input));
   const corrected = typeof result.corrected === 'string' ? result.corrected : input;
   const changes = Array.isArray(result.changes) ? result.changes : [];
   return { original: input, corrected, changes, has_changes: corrected.trim() !== input };
