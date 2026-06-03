@@ -36,7 +36,7 @@ Built as an open-source internship project with **zero paid infrastructure**: th
 | Pillar | What it does |
 |---|---|
 | **FAQ + AI Chatbot** | Category-organized FAQ with hybrid keyword + semantic search. Both the **search bar** and the **AI chatbot** answer from the FAQ first and **ask before checking the community forum** — if there's no FAQ match they prompt *"Not in the FAQ — do you want me to check the forum?"* and only search the forum (then redirect to the matching thread) once you say yes. |
-| **Ask a Query** | Structured intake with gibberish detection, opt-in grammar auto-correction, duplicate detection, **admin-curated categories/tags** (users pick from the list or "Others" — no free-form tagging), a required **joining date** and **contact email**, and screenshots. Posting is always attributed — **no anonymous posting**. |
+| **Ask a Query** | Structured intake with gibberish detection, **unfinished-question detection**, an opt-in **"Refine with AI"** pass, duplicate detection, **admin-curated categories/tags** (users pick from the list or "Others" — no free-form tagging), a required **joining date** and **contact email**, and screenshots. Posting is always attributed — **no anonymous posting**. |
 | **Q&A Forum** | A support-ticket model: any member answers (but **not on their own question**); only the poster — or a moderator/admin — rates/closes answers, and discussion stays poster ↔ answerer (no peer voting or cross-talk). Question voting, bookmarks, full-text + semantic **forum search**, a **My Questions / My Answers** filter, and reporting included; resolved questions sink to the bottom of the list. |
 | **Solution Marking Engine** | The poster (or a moderator/admin) marks an answer "helpful" to close the thread; **admins can mark an answer "Admin Verified"** (a label on the answer itself, not a user badge); resolved, high-value threads can be promoted into the canonical FAQ. |
 | **Reputation & Badges** | Points, tiered reputation badges (shown under each author's name in the forum), admin-awarded custom badges, and admin-issued moderation flags. **Admins carry no points or badges** — they moderate, they don't farm reputation. |
@@ -52,8 +52,9 @@ Built as an open-source internship project with **zero paid infrastructure**: th
 A query moves through a clear lifecycle, with quality gates at the front door so the community only ever sees real, well-formed questions.
 
 **1. Intake & quality gates** — when a member asks a question:
-- **Gibberish detection** — a fast heuristic (word-likeness scoring) blocks nonsense submissions; borderline cases escalate to an AI check. Blocked attempts count as spam strikes.
-- **Grammar assist** — an opt-in "Check grammar" pass cleans up spelling/clarity *without changing meaning*; the original text is preserved.
+- **Gibberish detection** — a fast heuristic (word-likeness scoring) blocks nonsense submissions; borderline cases escalate to an AI check. Blocked attempts count as spam strikes and are **flagged to the moderation queue** so admins can see repeat offenders.
+- **Unfinished-question detection** — a submission that's real words but clearly half-typed (too short, placeholder text, or trailing off mid-sentence) is blocked with a prompt to finish it. Because it's an honest mistake rather than abuse, it **does not** count as a spam strike.
+- **Refine with AI** — an opt-in "Refine with AI" pass cleans up spelling/clarity *without changing meaning*; the original text is preserved.
 - **Duplicate detection** — the question is embedded and compared (cosine similarity) against existing ones. Above the similarity threshold the user is shown the likely duplicate and can either jump to it or **post anyway** (which flags it for moderator review rather than silently rejecting).
 - **Context** — a **category and tags chosen from an admin-curated list** (users can't invent their own; an "Others" tag covers the gaps), a **required joining date and contact email**, and screenshots. Posting is **never anonymous** — every question is attributed to its author.
 
