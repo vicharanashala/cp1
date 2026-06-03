@@ -416,7 +416,8 @@ textarea {
 .row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
 }
 .checkbox {
   flex-direction: row !important;
@@ -1054,6 +1055,51 @@ textarea {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+/* --- Admin section polish: consistent button rhythm and spacing --- */
+/* Give the tab bar breathing room and a clearer active state. */
+.admin-tabs {
+  gap: 0.15rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 0;
+}
+.admin-tabs a {
+  padding: 0.55rem 1rem;
+  border-radius: 8px 8px 0 0;
+}
+.admin-tabs a:hover {
+  color: var(--text);
+  background: var(--surface);
+  text-decoration: none;
+}
+/* Inline action buttons in admin tables wrap cleanly and never touch. */
+.admin-table td .row {
+  gap: 0.4rem 0.5rem;
+}
+.admin-table td .btn-link,
+.admin-table td .btn-secondary {
+  white-space: nowrap;
+}
+.admin-table td button + button,
+.admin-table td .btn-link + .btn-link {
+  margin-left: 0.1rem;
+}
+/* Moderation actions in the Profile admin panel sit on their own line group. */
+.admin-controls .row {
+  margin-bottom: 0.75rem;
+}
+.admin-controls h2 {
+  margin-top: 1.25rem;
+  font-size: 1.05rem;
+}
+/* Attention queue rows: wrap on narrow widths, keep the action right-aligned. */
+.email-queue li {
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+}
+.email-queue li .btn-link {
+  margin-left: auto;
 }
 .admin-table .small,
 .small {
