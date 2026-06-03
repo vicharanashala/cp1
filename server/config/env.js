@@ -36,7 +36,10 @@ export const config = Object.freeze({
   },
 
   ai: {
-    apiKey: process.env.AI_API_KEY ?? '',
+    // Tests must stay deterministic and offline: ignore any real key under
+    // NODE_ENV=test so a local `.env` can't push the suite into live mode
+    // (non-deterministic embeddings, live quota, network flakiness).
+    apiKey: process.env.NODE_ENV === 'test' ? '' : (process.env.AI_API_KEY ?? ''),
     chatModel: process.env.AI_CHAT_MODEL ?? 'gemini-2.5-flash',
     cheapModel: process.env.AI_CHEAP_MODEL ?? 'gemini-2.5-flash-lite',
     embedModel: process.env.AI_EMBED_MODEL ?? 'gemini-embedding-001',
