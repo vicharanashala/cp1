@@ -1,4 +1,4 @@
- # Ask a Query & Forum
+# Ask a Query & Forum
 
 ## Overview
 
