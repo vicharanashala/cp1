@@ -4,7 +4,7 @@ This page is the architectural landing page for **Curio** — the entry point fo
 
 ---
 
-## Technology Stack
+## 1. Technology Stack
 
 Curio is a full-stack JavaScript application built on the MERN stack (MongoDB, Express, React, Node.js). The entire codebase — server, client, configuration, tests, tooling — uses **native ECMAScript Modules** (`"type": "module"` in every `package.json`). There are no CommonJS `require()` calls anywhere. This means top-level `await`, standard `import`/`export` syntax, and `import.meta.url` for file-path resolution are used consistently throughout.
 
@@ -59,7 +59,7 @@ The technology choices and their rationale:
 
 ---
 
-## Monorepo Structure
+## 2. Monorepo Structure
 
 The project is organised as an **npm-workspaces monorepo**. The root `package.json` declares two workspaces — `server` and `client` — and provides unified scripts that delegate to the appropriate workspace. A single `npm install` at the root installs dependencies for both workspaces, each into its own local `node_modules`. There is nothing installed globally.
 
@@ -143,7 +143,7 @@ Vite's dev server is configured to proxy `/api` and `/uploads` requests to `http
 
 ---
 
-## The Two Swappable Boundaries
+## 3. The Two Swappable Boundaries
 
 This is the most important architectural decision in Curio. The platform was built as an internship MVP running entirely on free infrastructure (local MongoDB, Gemini free tier, local disk for files). But it was designed from day one so that migrating to production infrastructure — the company's own managed database, its own AI keys, its own object storage — is a **configuration change, not a refactor**.
 
@@ -178,13 +178,13 @@ graph LR
     style AI fill:#2d6a4f,color:#fff
 ```
 
-### `server/config/db.js` — the database boundary
+### A. `server/config/db.js` — the database boundary
 
 This module is the sole location that calls `mongoose.connect()`. It exports three things: `connectDB(uri?)`, `disconnectDB()`, and the `mongoose` instance itself (so models can import the same Mongoose without requiring a separate import). The `connectDB` function accepts an optional URI override, which is how the test infrastructure injects the `mongodb-memory-server` URI without touching the production connection string.
 
 The function is idempotent — it tracks whether a connection has already been established and skips reconnection. To swap to a company-managed MongoDB instance (Atlas, self-hosted replica set, or anything else Mongoose supports), you change the `MONGODB_URI` environment variable and nothing else.
 
-### `server/config/ai.js` — the AI boundary
+### B. `server/config/ai.js` — the AI boundary
 
 This is the single module that calls the Google Gemini SDK (`@google/genai`). It exposes a clean public API with three methods:
 
@@ -199,7 +199,7 @@ The module also encapsulates all rate-limit resilience: a **serial request queue
 
 ---
 
-## Environment Variables
+## 4. Environment Variables
 
 All environment configuration is loaded and centralised in `server/config/env.js`. This module reads `process.env` exactly once at startup, applies defaults, and exports a frozen `config` object. No other file in the codebase touches `process.env` directly.
 
@@ -250,14 +250,14 @@ Additional variables handled by `env.js` that are not in `.env.example` but can 
 
 ---
 
-## Local Development Setup
+## 5. Local Development Setup
 
-### Prerequisites
+### A. Prerequisites
 
 - **Node.js ≥ 20** (the `engines` field enforces this)
 - **MongoDB** running locally on `localhost:27017`, or provided via the bundled Docker Compose
 
-### Step-by-step
+### B. Step-by-step
 
 ```bash
 # 1. Clone the repository
@@ -282,7 +282,7 @@ After step 5, Express is listening on `http://localhost:5000` and Vite is servin
 
 The seed script creates a single admin account (`admin@example.com` / `admin12345`) and imports the full curated FAQ set with pre-computed embeddings. Search, duplicate detection, and the RAG chatbot all work immediately in mock mode because the FAQ embeddings were generated offline and stored in the seed JSON — zero live AI calls are needed.
 
-### Server startup sequence
+### C. Server startup sequence
 
 When `npm run dev` starts the server, the following happens in `server.js`:
 
@@ -314,11 +314,11 @@ The `createApp()` function in `app.js` is deliberately separated from `server.js
 
 ---
 
-## Testing Infrastructure
+## 6. Testing Infrastructure
 
 Curio's test suite is built for speed, isolation, and reliability. Tests run in CI without needing a running MongoDB instance, without AI API keys, and without any network access.
 
-### Tools
+### A. Tools
 
 | Tool | Role |
 |---|---|
@@ -326,7 +326,7 @@ Curio's test suite is built for speed, isolation, and reliability. Tests run in 
 | **Supertest 7** | HTTP-level integration testing — sends real HTTP requests to the Express app without a running server |
 | **mongodb-memory-server 10** | Spins up an ephemeral, in-memory MongoDB instance per test suite — no external database needed |
 
-### How tests are structured
+### B. How tests are structured
 
 The test helper in `server/tests/helpers.js` provides three functions that every test suite uses:
 
@@ -361,7 +361,7 @@ describe('auth flow', () => {
 
 The key pattern here is that `createApp()` returns the Express app without calling `listen()`, and Supertest binds to it internally. The AI layer is automatically in mock mode because `AI_API_KEY` is never set in the test environment — no mocking library is needed for the AI layer because the `ai.js` module handles it natively.
 
-### Jest configuration
+### C. Jest configuration
 
 The Jest config in `server/jest.config.js` is minimal:
 
@@ -383,7 +383,7 @@ Tests are run with `--runInBand` (serial execution) to prevent concurrent in-mem
 "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --runInBand"
 ```
 
-### Test suites
+### D. Test suites
 
 The 11 test suites cover the application end-to-end:
 
@@ -409,11 +409,11 @@ npm test
 
 ---
 
-## CI Pipeline
+## 7. CI Pipeline
 
 Curio has two GitHub Actions workflows, both defined in `.github/workflows/`.
 
-### `ci.yml` — the gatekeeper
+### A. `ci.yml` — the gatekeeper
 
 This workflow runs on every push to `main` and on every pull request targeting `main`. It is the primary quality gate — no code merges until this is green.
 
@@ -435,7 +435,7 @@ The workflow runs on `ubuntu-latest` with Node.js 20 and uses npm's built-in cac
 
 The test step sets `NODE_ENV=test`, which triggers three behaviors in the application code: `morgan` logging is suppressed, rate limiting is skipped (determinism), and the AI layer operates in mock mode (no key is set in CI). The server tests use `mongodb-memory-server`, so no MongoDB service container is needed in the workflow — the runner downloads and starts a local MongoDB binary automatically.
 
-### `deploy.yml` — the deployment gate
+### B. `deploy.yml` — the deployment gate
 
 This workflow runs on pushes to `main` and can also be triggered manually (`workflow_dispatch`). It re-runs the full verify gate (lint + test + build) to confirm `main` is always in a deployable state.
 
@@ -461,9 +461,9 @@ The actual deployment step is **intentionally commented out**. The MVP runs on z
 
 ---
 
-## Docker & Deployment
+## 8. Docker & Deployment
 
-### Docker Compose — local orchestration
+### A. Docker Compose — local orchestration
 
 The `docker-compose.yml` at the project root provides a **one-command, reproducible run** for any reviewer, interviewer, or team member. It spins up two services:
 
@@ -477,7 +477,7 @@ docker compose up --build
 
 This single command starts MongoDB and the API server. The Vite client is run separately via `npm run dev:client` during development because Vite's HMR is more useful outside a container.
 
-### The Dockerfile
+### B. The Dockerfile
 
 The server's `Dockerfile` (`server/Dockerfile`) produces a lean Alpine-based Node.js 20 image:
 
@@ -502,7 +502,7 @@ CMD ["node", "server.js"]
 
 The image copies only the root and server `package.json` files first (Docker layer caching — dependencies are only reinstalled when `package.json` changes), installs production dependencies for the server workspace, then copies the server source. Dev dependencies (Jest, Supertest, `mongodb-memory-server`) are omitted from the production image.
 
-### Production deployment model
+### C. Production deployment model
 
 The production target is the company's own server — a persistent process that supports `node-cron` schedules, local file uploads, and a connection to a managed MongoDB instance. The deployment path:
 
@@ -513,7 +513,7 @@ The production target is the company's own server — a persistent process that 
 
 Environment variables (`MONGODB_URI`, `AI_API_KEY`, JWT secrets) are set as repository secrets in GitHub and injected at deploy time. The `env.js` production safety guard ensures the server refuses to start if JWT secrets are still set to their dev defaults.
 
-### Health check endpoint
+### D. Health check endpoint
 
 The Express API exposes `GET /api/health` that returns the application status, database connection state, AI mode (mock or live), and uptime. This is suitable for Docker healthchecks, load-balancer probes, and CI smoke tests:
 
