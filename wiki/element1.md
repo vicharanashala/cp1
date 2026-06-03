@@ -1,104 +1,88 @@
-# Authentication & User Accounts
+<h1 align="center">Curio Wiki: Platform Documentation</h1>
 
-A detailed overview of Curio's identity layer: JWT-based authentication with refresh-token rotation, role-based authorization, user profiles and settings, and the ban lifecycle that gates write access across the platform.
-
----
-
-## 1. Register & Login Flow
-
-Curio implements a secure authentication model using JSON Web Tokens (JWT) backed by a stateful refresh-token store. The credential lifecycle is handled in `server/services/authService.js`.
-
-- **Registration:** Validates credentials, hashes passwords using **bcrypt**, creates the user record, and starts a 1-day login streak. The `password_hash` is never returned over the API.
-- **Login:** Verifies the supplied credentials against the bcrypt hash, updates the consecutive login streak, and returns an **access / refresh token pair**.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as Client
-    participant API as authService
-    participant DB as MongoDB
-
-    U->>API: POST /api/auth/register (name, email, password)
-    API->>API: bcrypt.hash(password)
-    API->>DB: create User (password_hash, streak = 1)
-    API-->>U: { user, accessToken, refreshToken }
-
-    U->>API: POST /api/auth/login (email, password)
-    API->>DB: load User by email
-    API->>API: bcrypt.compare(password, hash)
-    API->>DB: update login streak
-    API-->>U: { user, accessToken, refreshToken }
-```
+**Curio** is a self-contained community knowledge platform that unifies everything a team needs to capture, organize, and grow its collective knowledge. Featuring a curated FAQ, a grounded AI chatbot, and a structured Q&A forum, Curio is built to improve itself over time by automatically promoting high-value community answers, archiving inactive threads, and filtering out low-quality queries.
 
 ---
 
-## 2. JWT Access & Refresh-Token Rotation
+## The Curio Wiki Map
 
-Authentication uses a two-token model: a short-lived access token for request authorization and a long-lived, single-use refresh token for silent re-authentication.
+To navigate the documentation, follow the sequential order:
 
-### A. Access Token
-
-A short-lived JWT held in memory by the client, containing the user ID and role. It is sent on every protected request in the `Authorization: Bearer <token>` header.
-
-### B. Refresh-Token Rotation
-
-Refresh tokens are **one-time use**. Each refresh token is stored **hashed (SHA-256)** in the database so it can be revoked instantly on logout, and every refresh issues a brand-new token, invalidating the previous one. A random `jti` (token ID) is embedded so two tokens minted in the same second never collide on the unique hash index.
-
-### C. Axios Interceptor (`client/src/api/client.js`)
-
-The client's Axios layer transparently handles expiry: it catches `401` responses, executes a **single in-flight refresh** request (subsequent calls await the same promise), and replays the originally failed requests once a fresh access token is obtained.
-
-```mermaid
-flowchart TD
-    Req[Protected request] --> Resp{Response}
-    Resp -->|200 OK| Done[Return data]
-    Resp -->|401 Unauthorized| Refresh[POST /api/auth/refresh]
-    Refresh --> Rotate[Rotate refresh token<br/>hash + store new, revoke old]
-    Rotate --> Replay[Replay original request with new access token]
-    Replay --> Done
-```
+1. **Element 1: Authentication & User Accounts**: Covers user identity, register/login flows, secure token rotation, notification preferences, and account ban controls.
+2. **Element 2: Ask a Query & Forum Engine**: Details query submission quality gates (gibberish/spam/duplicate detection), the ticket-like forum answering loop, voting, bookmarks, and automated solution finalization.
+3. **Element 3: Reputation, Badges & Moderation**: Explains the community points system, positive badge tiers, negative flags, expert-to-moderator applications, and admin-verified answers.
+4. **Element 4: FAQ Knowledge Base & AI Chatbot**: Discusses FAQ search, category accordions, promote-to-FAQ promotion, and the tiered grounded chatbot RAG pipeline.
+5. **Element 5: Admin Dashboard & Maintenance**: Explains admin control tabs, moderation queues, audit logs, rollback windows, and the 8 automated database background jobs.
+6. **Element 6: Architecture, Setup & DevOps**: The technical foundation of the system, monorepo workspaces layout, swappable boundaries, testing infrastructure, and team Git conventions.
 
 ---
 
-## 3. Roles & Authorization
+# Element 1: Authentication & User Accounts
 
-Authorization is role-based, with three tiers defined in the `ROLES` constant (`server/config/constants.js`).
+Curio implements a secure authentication model using JSON Web Tokens (JWT) and a stateful refresh token database. At the heart of this system is the Curio Gatekeeper, which manages user identities, system permissions, and community moderation. It ensures that every contribution is attributed, every session is secure, and the community remains safe and productive.
 
-| Role | Capabilities |
-|---|---|
-| `user` | Standard member — ask, answer, vote, bookmark |
-| `moderator` | Delete / regulate content, rate any answer, escalate, re-tag |
-| `admin` | Global control — full dashboard, bans, roles, taxonomy, badges |
+## What Makes Curio's Identity System Unique?
 
-Enforcement lives in `server/middleware/auth.js`:
-
-- **`auth`** — requires a valid access token; rejects unauthenticated requests.
-- **`optionalAuth`** — attaches the user to the request context if a token is present, but allows anonymous access (used for public reads).
-- **`admin`** — restricts a route to `admin`-role accounts. The middleware loads a fresh `User` document, so a role promoted in the database takes effect immediately, regardless of the (possibly stale) token claim.
+1. **Accountability by Design**: Anonymous posting is disabled. Every question, answer, and comment is linked to a verified user profile, encouraging constructive and high-quality participation.
+2. **Invisible Security Shield**: User sessions are guarded using a dual-token system (short-lived access keys and one-time rotating refresh keys). If a session is interrupted or suspicious, the system automatically handles security in the background without forcing constant logins.
+3. **Real-Time Role Enforcement**: Permissions are validated against live database records on every single action. If an admin promotes a user or bans a bad actor, the permissions take effect instantly across the platform.
+4. **Self-Safety Lockout Guard**: Administrators cannot demote, restrict, or ban their own accounts. This built-in guardrail prevents accidental locking out of the system's caretakers.
 
 ---
 
-## 4. User Profiles & Settings
+## The Guided Tour of Identity & Moderation
 
-- **Profiles (`server/services/userService.js`):** A public route returning a user's stats, reputation tier, and earned / custom badges via `getProfile`. Profiles surface query and answer counts, member-since date, and ban status.
-- **Settings:** A form that lets a member update their display name and toggle notification preferences (answers, mentions, system) through `PATCH /users/me`.
+Here is an overview of how user accounts, permissions, and security rules operate in Curio, explained in simple language:
 
----
+### 1. Secure Registration & Login
+Creating an account and logging in are the entry points to Curio.
+- **Registration**: New users register with their name, email, and password. The system checks that emails are unique and enforces a secure password length.
+- **Password Hashing**: Passwords are encrypted before they ever reach the database, ensuring that user credentials remain completely secure.
 
-## 5. Ban & Unban Flow
+### 2. The Calendar Login Streak
+To encourage daily engagement, Curio tracks consecutive login streaks.
+- When a user logs in on a new calendar day, their streak increments by one.
+- If they miss a day, the streak resets to one.
+- Multiple logins within the same calendar day do not affect the streak, ensuring a fair tracking system across timezone changes.
 
-Bans are the enforcement mechanism that gates write access for misbehaving accounts.
+### 3. Dynamic User Profiles
+Every user has a public profile page that showcases their contributions and reputation.
+- It displays their total questions asked, answers posted, and registration date.
+- It highlights their current community standing, points total, and badge checklist.
+- If the user is currently banned or restricted, a prominent status banner is shown on their profile page.
 
-- **Bans:** Admins ban users **temporarily** (an hourly duration) or **permanently**. Every ban writes an entry to the Audit Log and triggers a system notification to the affected user.
-- **Ban enforcement:** The `banCheck` middleware blocks all write routes for banned users. Timed bans render a live countdown banner to the user; permanent bans lock the account out entirely.
-- **Unban & expiry:** Admins can lift a ban manually (which also clears `requires_approval`). Expired time-limited bans are lifted automatically — both lazily on access via `banCheck` and proactively by an hourly `expire-bans` cron job.
+### 4. The Automatic Standing Engine
+As users answer questions and receive upvotes, they earn reputation points.
+- The standing engine dynamically calculates their tier: Helper (30 points), Contributor (100 points), Expert (200 points), or Legend (300 points).
+- The profile displays progress indicators showing how close they are to achieving the next level.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Active
-    Active --> TimedBan: admin bans (hours > 0)
-    Active --> PermaBan: admin bans (permanent)
-    TimedBan --> Active: countdown elapses<br/>(cron or lazy banCheck)
-    TimedBan --> Active: admin unban
-    PermaBan --> Active: admin unban
-```
+### 5. Bespoke Notification Preferences
+Users can control how they want to receive system and community updates.
+- Under their private settings, users can toggle alerts for three categories: answers to their own questions, mentions or replies, and system or moderation notices.
+
+### 6. Expert-to-Moderator Roster Applications
+Reaching the Expert tier unlocks the ability to apply for moderation powers.
+- Eligible users see a button in their settings to request moderator privileges.
+- Submitting a request flags the user for administrative review, helping scale the moderation team organically from within the community.
+
+### 7. Core Access Control Roles
+The platform operates on a clear hierarchical permissions system:
+- **Standard Users**: Can browse the FAQ, ask queries, answer forum threads, comment, upvote, and bookmark posts.
+- **Moderators**: Trusted contributors who can edit categories, flag content for admin review, and delete offensive questions or answers.
+- **Administrators**: Control the entire platform, including editing categories, managing database jobs, promoting questions to the FAQ, and issuing bans or badges.
+
+### 8. Admin-Issued Custom Badges
+Administrators can award custom badges to users to highlight specialized expertise or achievements (such as "Documentation Hero").
+- **Admin Verified Badge**: Automatically awarded to a user when an administrator marks one of their forum answers as authoritative. This badge remains pinned to their profile permanently.
+
+### 9. Account Ban Controls
+When users violate community guidelines, administrators can lock their accounts.
+- **Temporary Bans**: Admins can specify a duration (e.g., 24 hours). The user is blocked from making any contributions, and their ban is lifted automatically by a background safety job once the timer expires.
+- **Permanent Bans**: Locks the account indefinitely.
+- The banned user is greeted with a ban banner displaying the reason for the lockout and the remaining time.
+
+### 10. Moderation Flags (Negative Badges)
+Administrators can issue specific behavioral penalties:
+- **Warning**: A formal notification shown on their profile that does not restrict their current permissions.
+- **Restricted**: Gates the user behind a post-approval wall. Any question they submit is automatically hidden from the public forum until approved by a moderator.
+- **Suspended**: Causes an immediate, permanent ban on the account.
