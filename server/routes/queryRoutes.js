@@ -11,8 +11,8 @@ const router = Router();
 // Public reads (optionalAuth so the viewer's ownership can be reflected).
 router.get('/', optionalAuth, ctrl.list);
 
-// Opt-in grammar check (AI-backed, rate-limited).
-router.post('/check-grammar', auth, aiLimiter, ctrl.checkGrammar);
+// Opt-in "Refine with AI" pass (AI-backed, rate-limited).
+router.post('/refine', auth, aiLimiter, ctrl.refine);
 
 // The current user's saved questions (must precede /:id).
 router.get('/bookmarks', auth, ctrl.bookmarks);
