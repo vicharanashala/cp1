@@ -496,8 +496,13 @@ export async function updateQuery(user, id, payload) {
  * attention queue can surface and sort it.
  */
 export async function flagForAttention(user, id) {
+  // Admins are the recipients of attention flags — they review/clear the queue,
+  // so they never raise one themselves.
+  if (user.role === ROLES.ADMIN) {
+    throw ApiError.forbidden('Admins review attention flags and do not raise them');
+  }
   const isExpert = (user.badges ?? []).includes(ATTENTION_FLAG_BADGE_KEY);
-  if (!isExpert && user.role !== ROLES.ADMIN && !user.is_moderator) {
+  if (!isExpert && !user.is_moderator) {
     throw ApiError.forbidden(
       'Only Expert-level members or moderators can flag a question for admin attention',
     );

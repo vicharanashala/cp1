@@ -118,8 +118,9 @@ export default function QueryDetail() {
   };
 
   const resolved = query?.status === 'resolved';
-  // Expert-badge holders, moderators, and admins may escalate to the admins.
-  const canFlagAttention = Boolean(user?.badges?.includes('expert') || canModerate);
+  // Expert-badge holders and moderators may escalate to the admins. Admins
+  // themselves are the recipients, so they never see/raise this flag.
+  const canFlagAttention = Boolean(user?.badges?.includes('expert') || canModerate) && !isAdmin;
 
   if (loading) return <div className="container">Loading…</div>;
   if (error) return <div className="container"><p className="muted">{error}</p></div>;
