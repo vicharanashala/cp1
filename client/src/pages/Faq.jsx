@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { listFaqs, searchFaqs } from '../api/faq.js';
 import { searchQueries } from '../api/queries.js';
 
@@ -15,6 +15,9 @@ export default function Faq() {
   const [openItems, setOpenItems] = useState({});
   const [openCats, setOpenCats] = useState({});
   const [showAll, setShowAll] = useState({});
+  const [highlightId, setHighlightId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusId = searchParams.get('focus'); // deep link, e.g. from the chatbot
 
   useEffect(() => {
     let active = true;
@@ -34,6 +37,31 @@ export default function Faq() {
       active = false;
     };
   }, []);
+
+  // Deep link: when arriving with ?focus=<faqId> (e.g. the chatbot's "Go to FAQ"
+  // button), open that section, reveal the entry, expand it, scroll to it and
+  // briefly highlight it.
+  useEffect(() => {
+    if (!focusId || groups.length === 0) return;
+    const group = groups.find((g) => g.items.some((it) => String(it.id) === String(focusId)));
+    if (!group) return;
+    setOpenCats((o) => ({ ...o, [group.category]: true }));
+    setShowAll((s) => ({ ...s, [group.category]: true }));
+    setOpenItems((o) => ({ ...o, [focusId]: true }));
+    setHighlightId(focusId);
+    const t = setTimeout(() => {
+      document.getElementById(`faq-${focusId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    // Clear the highlight and drop the param so a refresh doesn't re-trigger it.
+    const clear = setTimeout(() => {
+      setHighlightId(null);
+      setSearchParams({}, { replace: true });
+    }, 3000);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(clear);
+    };
+  }, [focusId, groups, setSearchParams]);
 
   // Dynamic search: query the FAQ semantically as the user types (debounced).
   // The community forum is NOT searched here - only after the user opts in via
@@ -187,6 +215,7 @@ export default function Faq() {
                         entry={item}
                         open={openItems[item.id]}
                         onToggle={() => toggleItem(item.id)}
+                        highlight={String(item.id) === String(highlightId)}
                       />
                     ))}
                     {g.items.length > PREVIEW_COUNT && (
@@ -218,11 +247,15 @@ export default function Faq() {
   );
 }
 
-function FaqItem({ entry, open, onToggle }) {
+function FaqItem({ entry, open, onToggle, highlight }) {
   return (
-    <div className={`faq-item ${open ? 'open' : ''}`}>
+    <div
+      id={`faq-${entry.id}`}
+      className={`faq-item ${open ? 'open' : ''} ${highlight ? 'highlight' : ''}`}
+    >
       <button className="faq-q" onClick={onToggle}>
         <span className="faq-q-text">
+          {entry.number != null && <span className="faq-num">#{entry.number}</span>}
           {entry.question}
           {entry.source === 'qa' && <span className="chip promoted">Promoted from Q&amp;A</span>}
         </span>

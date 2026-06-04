@@ -23,7 +23,12 @@ export async function listFaqs({ category } = {}) {
     if (!groups.has(e.category)) groups.set(e.category, []);
     groups.get(e.category).push(strip(e));
   }
-  return [...groups.entries()].map(([cat, items]) => ({ category: cat, items }));
+  // Number each entry 1..N within its section (in display order) so the UI and
+  // the chatbot can cite a stable "Section, #N" reference.
+  return [...groups.entries()].map(([cat, items]) => ({
+    category: cat,
+    items: items.map((it, i) => ({ ...it, number: i + 1 })),
+  }));
 }
 
 /** Hybrid FAQ search: semantic (cosine over embeddings) + keyword boost. */

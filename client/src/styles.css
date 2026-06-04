@@ -788,6 +788,22 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  scroll-margin-top: 90px; /* clear the sticky header when deep-linked */
+}
+/* Brief highlight when arriving via a deep link (e.g. chatbot "Go to FAQ"). */
+.faq-item.highlight {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-tint);
+}
+/* Per-section number shown before each FAQ question. */
+.faq-num {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-tint);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
 }
 .faq-q {
   width: 100%;
