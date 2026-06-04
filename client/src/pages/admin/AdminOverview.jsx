@@ -4,13 +4,16 @@ import { getMetrics, getHealth, getAudit, listUsers, getQueriesByCategory } from
 import { relativeTime } from '../../lib/time.js';
 
 function KpiCard({ icon, label, value, sub, tone }) {
+  // Numbers/percentages get the big display font; word statuses (e.g.
+  // "Operational") use a smaller size so they fit inside the card.
+  const isText = typeof value === 'string' && Number.isNaN(parseFloat(value));
   return (
     <div className={`kpi-card ${tone ? `tone-${tone}` : ''}`}>
       <div className="kpi-top">
         <span className="kpi-label">{label}</span>
         <span className="material-symbols-outlined">{icon}</span>
       </div>
-      <strong className="kpi-value">{value}</strong>
+      <strong className={`kpi-value ${isText ? 'is-text' : ''}`}>{value}</strong>
       {sub && <span className="kpi-sub">{sub}</span>}
     </div>
   );

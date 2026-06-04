@@ -2045,6 +2045,7 @@ select:focus,
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  min-width: 0; /* allow the card to shrink so content never overflows the grid track */
 }
 .kpi-top {
   display: flex;
@@ -2065,6 +2066,11 @@ select:focus,
   font-size: 1.9rem;
   font-weight: 700;
   line-height: 1.1;
+  overflow-wrap: anywhere; /* never let a long value spill past the card edge */
+}
+/* Word statuses (e.g. "Operational") are too long for the big number font. */
+.kpi-value.is-text {
+  font-size: 1.25rem;
 }
 .kpi-sub {
   font-size: 0.78rem;
@@ -2079,9 +2085,15 @@ select:focus,
 
 .overview-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Cards flow and settle based on how many there are: as many columns as fit
+     at >=320px each, wrapping to fewer columns on narrower screens. Avoids the
+     fixed empty cell a 2-column layout left when there were 3 panels. */
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.5rem;
   align-items: start;
+}
+.overview-grid > .card {
+  min-width: 0; /* let table/feed content shrink instead of overflowing */
 }
 .card-head {
   display: flex;
