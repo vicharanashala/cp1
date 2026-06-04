@@ -103,6 +103,15 @@ export const ai = {
   },
 
   /**
+   * Free, offline lexical embedding (no network, no credits). Used for cheap
+   * retrieval/search so we don't spend embedding-API quota on every lookup.
+   * Same vectoriser as mock mode, available regardless of live/mock.
+   */
+  localEmbed(text) {
+    return mockEmbed(text);
+  },
+
+  /**
    * Embed a single string → number[] of length embedDims.
    */
   async embed(text) {

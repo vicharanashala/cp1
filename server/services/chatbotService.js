@@ -6,7 +6,7 @@ import { Answer } from '../models/Answer.js';
 import { ai } from '../config/ai.js';
 import { ApiError } from '../utils/ApiError.js';
 import { cosineSimilarity } from './vectorService.js';
-import { CHATBOT_MATCH_THRESHOLD } from '../config/constants.js';
+import { CHATBOT_LOCAL_MATCH_THRESHOLD } from '../config/constants.js';
 
 const FALLBACK =
   "I couldn't find this in the FAQ or the community forum. Try rephrasing your question, browse the FAQ, or raise a query so the community can help.";
@@ -89,19 +89,33 @@ export async function ask({ sessionToken, userId, message, checkForum = false })
   if (!text) throw ApiError.badRequest('Message is required');
 
   const session = await getOrCreateSession(sessionToken, userId);
-  const qEmbed = await ai.embed(text);
+  // Retrieve with the FREE offline lexical embedding — no embedding-API credits
+  // are spent on search. Only the final reply is composed by the live model.
+  const qEmbed = ai.localEmbed(text);
 
   let reply;
 
   if (!checkForum) {
-    // Tier 1 — curated FAQ. The assistant answers from the FAQ and points there.
+    // Tier 1 — curated FAQ. Match on the FAQ *question* (the answer body dilutes
+    // lexical matching), embedded offline on the fly so no stored vectors are
+    // needed and no mock/live mismatch can occur.
     const faqs = await FaqEntry.find({ is_deleted: false })
-      .select('question answer embedding')
+      .select('question answer category sort_order createdAt')
       .lean();
-    const faqHit = bestMatch(qEmbed, faqs);
+    const faqHit = bestMatch(
+      qEmbed,
+      faqs.map((f) => ({ ...f, embedding: ai.localEmbed(f.question) })),
+    );
 
-    if (faqHit && faqHit.score >= CHATBOT_MATCH_THRESHOLD) {
+    if (faqHit && faqHit.score >= CHATBOT_LOCAL_MATCH_THRESHOLD) {
       const f = faqHit.doc;
+      // Stable "Section, #N" reference — N is the entry's 1-based position within
+      // its section, matching the FAQ page order (sort_order, then createdAt).
+      const number =
+        faqs
+          .filter((x) => x.category === f.category)
+          .sort((a, b) => a.sort_order - b.sort_order || new Date(a.createdAt) - new Date(b.createdAt))
+          .findIndex((x) => String(x._id) === String(f._id)) + 1;
       const content = await compose(
         buildPrompt(text, 'FAQ entry', `Q: ${f.question}\nA: ${f.answer}`),
         f.answer,
@@ -109,7 +123,7 @@ export async function ask({ sessionToken, userId, message, checkForum = false })
       reply = {
         content,
         source_tier: 'faq',
-        citations: [{ kind: 'faq', ref_id: f._id, title: f.question }],
+        citations: [{ kind: 'faq', ref_id: f._id, title: f.question, section: f.category, number }],
       };
     } else {
       // Not in the FAQ — ask permission before touching the forum database.
@@ -122,16 +136,19 @@ export async function ask({ sessionToken, userId, message, checkForum = false })
     }
   } else {
     // Consent granted — Tier 2 search over resolved community Q&A, then redirect.
+    // Match on the question title with the same free offline embedding.
     const queries = await Query.find({
       is_deleted: false,
       accepted_answer_id: { $ne: null },
-      embedding: { $exists: true, $ne: null },
     })
-      .select('title embedding accepted_answer_id')
+      .select('title accepted_answer_id')
       .lean();
-    const qHit = bestMatch(qEmbed, queries);
+    const qHit = bestMatch(
+      qEmbed,
+      queries.map((q) => ({ ...q, embedding: ai.localEmbed(q.title) })),
+    );
 
-    if (qHit && qHit.score >= CHATBOT_MATCH_THRESHOLD) {
+    if (qHit && qHit.score >= CHATBOT_LOCAL_MATCH_THRESHOLD) {
       const q = qHit.doc;
       const accepted = await Answer.findById(q.accepted_answer_id).lean();
       const body = accepted?.body ?? '';

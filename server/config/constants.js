@@ -104,7 +104,15 @@ export const INCOMPLETE_MIN_BODY_WORDS = 4; // body must have at least this many
 export const INCOMPLETE_MIN_TITLE_WORDS = 3; // title must have at least this many words
 
 // RAG chatbot: minimum cosine similarity for a retrieved doc to count as a match.
+// The chatbot retrieves with the free OFFLINE (lexical) embedding to avoid
+// spending embedding-API credits on every message — only the reply is composed
+// by the live model. Lexical cosine scores run higher than dense-semantic ones,
+// so the chatbot uses its own, stricter threshold (below) rather than this one.
 export const CHATBOT_MATCH_THRESHOLD = 0.3;
+// Minimum lexical cosine for the chatbot's offline FAQ/forum search to count as
+// a hit. Tuned so near-exact question matches pass while loosely-related ones
+// fall through to the "check the forum?" prompt.
+export const CHATBOT_LOCAL_MATCH_THRESHOLD = 0.4;
 
 // Query amalgamation: cosine similarity to group "related" queries for admin
 // review (broader than the strict duplicate threshold).
