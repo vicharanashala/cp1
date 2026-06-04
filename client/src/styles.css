@@ -914,6 +914,20 @@ textarea {
 .n-title {
   font-size: 0.9rem;
 }
+/* Count of grouped events (e.g. 3 comments collapsed into one notification). */
+.n-count {
+  display: inline-block;
+  margin-left: 0.4rem;
+  min-width: 1.1rem;
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.3rem;
+  text-align: center;
+  color: #fff;
+  background: var(--primary);
+  border-radius: 999px;
+}
 .n-msg {
   font-size: 0.8rem;
   color: var(--muted);

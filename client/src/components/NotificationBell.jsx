@@ -97,7 +97,10 @@ export default function NotificationBell() {
               {items.map((n) => {
                 const body = (
                   <>
-                    <span className="n-title">{n.title}</span>
+                    <span className="n-title">
+                      {n.title}
+                      {n.group_count > 1 && <span className="n-count">{n.group_count}</span>}
+                    </span>
                     {n.message && <span className="n-msg">{n.message}</span>}
                   </>
                 );

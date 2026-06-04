@@ -12,6 +12,12 @@ const notificationSchema = new mongoose.Schema(
     related_query_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Query', default: null },
     related_answer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Answer', default: null },
 
+    // Grouping: how many events (answers/comments) this notification represents,
+    // and when the most recent one arrived (drives ordering so a grouped item
+    // bubbles to the top on each new event).
+    group_count: { type: Number, default: 1 },
+    last_event_at: { type: Date, default: Date.now },
+
     is_read: { type: Boolean, default: false, index: true },
   },
   { timestamps: true },

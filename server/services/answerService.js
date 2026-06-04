@@ -6,7 +6,7 @@ import { User } from '../models/User.js';
 import { ModerationQueue } from '../models/ModerationQueue.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { ApiError } from '../utils/ApiError.js';
-import { notify } from './notificationService.js';
+import { notify, notifyGrouped } from './notificationService.js';
 import { awardPoints, topBadge } from './badgeService.js';
 import {
   POINTS,
@@ -79,10 +79,14 @@ export async function postAnswer(user, queryId, body) {
   }
 
   if (String(query.author_id) !== String(user._id)) {
-    await notify({
+    await notifyGrouped({
       recipientId: query.author_id,
       type: NOTIFICATION_TYPE.ANSWER,
-      title: 'New answer to your question',
+      actorName: user.name,
+      makeTitle: (count, name) =>
+        count <= 1
+          ? `${name} answered your question`
+          : `${name} and ${count - 1} other${count - 1 === 1 ? '' : 's'} answered your question`,
       message: query.title,
       link: `/queries/${query._id}`,
       queryId: query._id,
@@ -185,10 +189,15 @@ export async function addComment(user, answerId, body) {
   });
 
   if (String(answer.author_id) !== String(user._id)) {
-    await notify({
+    await notifyGrouped({
       recipientId: answer.author_id,
       type: NOTIFICATION_TYPE.COMMENT,
-      title: 'New comment on your answer',
+      actorName: user.name,
+      makeTitle: (count, name) =>
+        count <= 1
+          ? `${name} commented on your answer`
+          : `${name} and ${count - 1} other${count - 1 === 1 ? '' : 's'} commented on your answer`,
+      message: parent?.title ?? '',
       link: `/queries/${answer.query_id}`,
       queryId: answer.query_id,
       answerId: answer._id,
