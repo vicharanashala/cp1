@@ -997,6 +997,30 @@ textarea {
   flex-wrap: wrap;
   gap: 0.4rem;
 }
+/* FAQ citation: section + number, the question, and a redirect button. */
+.cite-faq {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  width: 100%;
+  margin-top: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.cite-faq-ref {
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: capitalize;
+}
+.cite-faq-q {
+  color: var(--text);
+}
+.cite-faq-btn {
+  align-self: flex-start;
+}
 .chat-input {
   display: flex;
   gap: 0.5rem;

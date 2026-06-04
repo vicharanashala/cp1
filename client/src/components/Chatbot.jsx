@@ -150,7 +150,17 @@ export default function Chatbot() {
                             </Link>
                           ) : (
                             <span key={c.ref_id} className="cite-faq">
-                              {c.title}
+                              <span className="cite-faq-ref">
+                                {c.section ? `FAQ • ${c.section} • #${c.number}` : 'FAQ'}
+                              </span>
+                              <span className="cite-faq-q">{c.title}</span>
+                              <Link
+                                className="btn-secondary btn-sm cite-faq-btn"
+                                to={`/faq?focus=${c.ref_id}`}
+                                onClick={() => setOpen(false)}
+                              >
+                                Go to FAQ
+                              </Link>
                             </span>
                           ),
                         )}
