@@ -2124,15 +2124,17 @@ select:focus,
 }
 
 .overview-grid {
-  display: grid;
-  /* Cards flow and settle based on how many there are: as many columns as fit
-     at >=320px each, wrapping to fewer columns on narrower screens. Avoids the
-     fixed empty cell a 2-column layout left when there were 3 panels. */
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-  align-items: start;
+  /* Masonry-style flow: as many ~340px columns as fit, and cards pack
+     vertically to fill each column. A short panel (e.g. "All clear") no longer
+     strands a tall empty gap beside it, and an odd panel count never leaves an
+     empty grid cell — the layout settles itself around however many panels and
+     listings there are. */
+  columns: 340px;
+  column-gap: 1.5rem;
 }
 .overview-grid > .card {
+  break-inside: avoid; /* keep each panel whole within a column */
+  margin: 0 0 1.5rem; /* vertical rhythm; column-gap handles horizontal spacing */
   min-width: 0; /* let table/feed content shrink instead of overflowing */
 }
 .card-head {
@@ -2200,7 +2202,7 @@ select:focus,
 
 @media (max-width: 760px) {
   .overview-grid {
-    grid-template-columns: 1fr;
+    columns: 1;
   }
 }
 
