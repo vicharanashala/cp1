@@ -3,31 +3,47 @@ import { Link } from 'react-router-dom';
 import { listUsers, setRole, banUser, unbanUser, setModerator } from '../../api/admin.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
+const PAGE_SIZE = 10;
+
 export default function AdminUsers() {
   const { user } = useAuth();
-  const [data, setData] = useState({ items: [] });
+  const [data, setData] = useState({ items: [], total: 0, page: 1, limit: PAGE_SIZE });
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async (search) => {
-    setData(await listUsers(search ? { q: search } : {}));
+  const load = useCallback(async (search, pageNum) => {
+    const params = { limit: PAGE_SIZE };
+    if (search) params.q = search;
+    if (pageNum > 1) params.page = pageNum;
+    setData(await listUsers(params));
   }, []);
 
-  // Live, debounced search: results update as you type - no need to click Search.
+  // Live, debounced search: results update as you type, always from page 1.
   useEffect(() => {
-    const t = setTimeout(() => load(q.trim()), 300);
+    const t = setTimeout(() => {
+      setPage(1);
+      load(q.trim(), 1);
+    }, 300);
     return () => clearTimeout(t);
   }, [q, load]);
+
+  const goToPage = (p) => {
+    setPage(p);
+    load(q.trim(), p);
+  };
 
   const act = async (fn) => {
     setBusy(true);
     try {
       await fn();
-      await load(q);
+      await load(q.trim(), page);
     } finally {
       setBusy(false);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil((data.total || 0) / (data.limit || 20)));
 
   const onBan = (u) => {
     const hours = window.prompt('Ban for how many hours? (blank = permanent)', '24');
@@ -115,6 +131,24 @@ export default function AdminUsers() {
           ))}
         </tbody>
       </table>
+
+      {totalPages > 1 && (
+        <nav className="pagination">
+          <button className="btn-secondary" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+            ‹ Prev
+          </button>
+          <span className="page-status">
+            Page {page} of {totalPages} · {data.total} users
+          </span>
+          <button
+            className="btn-secondary"
+            disabled={page >= totalPages}
+            onClick={() => goToPage(page + 1)}
+          >
+            Next ›
+          </button>
+        </nav>
+      )}
     </div>
   );
 }
